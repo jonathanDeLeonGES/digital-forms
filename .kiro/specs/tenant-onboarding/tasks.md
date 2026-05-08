@@ -40,7 +40,7 @@
 - [ ] 3. Servicio y API de registro de tenant (P)
   - _Boundary: TenantRegistrationService, TenantRegistrationView, TenantRegistrationSerializer_
 
-- [ ] 3.1 Implementar TenantRegistrationService
+- [x] 3.1 Implementar TenantRegistrationService
   - Implementar `TenantRegistrationService.register(nombre_empresa, subdominio, email_admin)` que orquesta: crear `Tenant` (auto-schema), crear `Domain`, crear `Subscription` (plan=trial, fecha_fin=hoy+14 días)
   - Manejar `IntegrityError` en la creación de `Domain` (subdominio duplicado) → lanzar `SubdomainAlreadyExistsError` y llamar `tenant.delete()` para cleanup
   - Si cualquier paso posterior falla, llamar `tenant.delete()` antes de re-lanzar la excepción
