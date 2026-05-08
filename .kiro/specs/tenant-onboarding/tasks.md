@@ -9,7 +9,7 @@
   - La configuración de settings permite ejecutar `python manage.py migrate_schemas --shared` sin errores
   - _Requirements: 2.1, 4.1_
 
-- [ ] 1.2 Configurar URL routing público y de tenant
+- [x] 1.2 Configurar URL routing público y de tenant
   - Crear `config/urls_public.py` con las rutas del schema público: endpoint de registro (`/api/public/`) y Django Admin (`/admin/`)
   - Crear `config/urls_tenant.py` con rutas vacías (placeholder para Wave 2+)
   - Configurar `ROOT_URLCONF` y `PUBLIC_SCHEMA_URLCONF` en settings
