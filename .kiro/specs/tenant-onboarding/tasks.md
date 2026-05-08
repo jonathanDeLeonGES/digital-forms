@@ -79,8 +79,8 @@
   - Tras extender el trial de un tenant bloqueado, el tenant puede acceder sin reiniciar el servidor
   - _Requirements: 3.3, 3.4, 3.5, 6.2, 6.5_
 
-- [ ] 6. Formulario de registro (frontend)
-- [ ] 6.1 Implementar RegisterPage
+- [x] 6. Formulario de registro (frontend)
+- [x] 6.1 Implementar RegisterPage
   - Crear `frontend/src/pages/Register/RegisterPage.tsx` con formulario de tres campos: nombre de empresa, subdominio, email del administrador
   - Validar en frontend: subdominio solo acepta `[a-z0-9-]`; email válido; nombre no vacío
   - Al enviar, llamar a `POST /api/public/tenants/register/` y mostrar mensaje de éxito con la URL del tenant (`{subdominio}.sgca.com`) o error inline por campo si la respuesta es 400/409
@@ -88,8 +88,8 @@
   - _Requirements: 1.1, 1.2, 1.3, 1.5_
   - _Depends: 3.2_
 
-- [ ] 7. Tests de integración y E2E
-- [ ] 7.1 Tests de integración del flujo de registro
+- [x] 7. Tests de integración y E2E
+- [x] 7.1 Tests de integración del flujo de registro
   - Test: registro exitoso → verifica existencia de Tenant, Domain, Subscription(trial) y schema PostgreSQL en la BD
   - Test: registro con subdominio duplicado → HTTP 409, sin recursos huérfanos
   - Test: registro con subdominio con caracteres inválidos → HTTP 400
@@ -97,7 +97,7 @@
   - Todos los tests pasan con `pytest` y schemas de test aislados
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.3_
 
-- [ ] 7.2 Tests de integración del AccessPolicyMiddleware
+- [x] 7.2 Tests de integración del AccessPolicyMiddleware
   - Test: request a endpoint de tenant con trial activo → HTTP 200 (pasa)
   - Test: request a endpoint de tenant con trial vencido → HTTP 402 con `code: trial_expired`
   - Test: request a `/admin/` con trial vencido → HTTP 200 (whitelist, pasa)
@@ -105,7 +105,7 @@
   - Test: request a tenant Enterprise → HTTP 200 (siempre activo)
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [ ] 7.3 Tests E2E del ciclo completo de tenant
+- [x] 7.3 Tests E2E del ciclo completo de tenant
   - Test E2E: registrar tenant → acceder al subdominio → verificar acceso activo
   - Test E2E: trial vence → acceso bloqueado → system admin extiende trial → acceso restaurado
   - Test E2E: system admin cambia Trial a Enterprise → acceso ilimitado sin fecha de vencimiento
