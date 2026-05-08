@@ -17,7 +17,7 @@
   - _Requirements: 4.1, 6.3_
 
 - [ ] 2. Modelos del schema público
-- [ ] 2.1 Implementar modelos Tenant y Domain
+- [x] 2.1 Implementar modelos Tenant y Domain
   - Crear modelo `Tenant` heredando de `TenantMixin` con campos `nombre_empresa` (str, max 200), `email_admin` (EmailField), `created_at`; establecer `auto_create_schema = True` y `auto_drop_schema = True`
   - Crear modelo `Domain` heredando de `DomainMixin`
   - El validador de subdominio `validate_subdomain_format()` rechaza subdominios con caracteres inválidos (solo `[a-z0-9][a-z0-9-]*[a-z0-9]`)
