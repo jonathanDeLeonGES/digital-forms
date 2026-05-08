@@ -31,7 +31,7 @@
   - Tests unitarios de `is_active()` cubren: trial activo, trial vencido hoy, trial vencido ayer, Enterprise sin fecha_fin
   - _Requirements: 3.1, 5.4_
 
-- [ ] 2.3 Crear migraciones y fixture inicial de planes
+- [x] 2.3 Crear migraciones y fixture inicial de planes
   - Generar y aplicar migraciones del schema público para los 4 modelos
   - Crear fixture `tenants/fixtures/initial_plans.json` con los dos registros: `trial` y `enterprise`
   - `python manage.py migrate_schemas --shared` completa sin errores y `Plan.objects.count() == 2` tras cargar el fixture
