@@ -194,7 +194,7 @@ export default function RegisterPage() {
             <label htmlFor="subdominio" className="block text-sm font-medium text-gray-700 mb-1">
               Subdominio
             </label>
-            <div className="flex items-center rounded-lg border shadow-sm focus-within:ring-2 focus-within:ring-blue-500 overflow-hidden ${errors.subdominio ? 'border-red-400' : 'border-gray-300'}">
+            <div className={`flex items-center rounded-lg border shadow-sm focus-within:ring-2 focus-within:ring-blue-500 overflow-hidden ${errors.subdominio ? 'border-red-400' : 'border-gray-300'}`}>
               <input
                 id="subdominio"
                 name="subdominio"
