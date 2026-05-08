@@ -54,7 +54,7 @@
   - `curl -X POST /api/public/tenants/register/ -d '{"nombre_empresa":"ACME","subdominio":"acme","email_admin":"a@b.com"}'` retorna HTTP 201 con el body esperado
   - _Requirements: 1.1, 1.2, 1.3, 1.5_
 
-- [ ] 4. (P) AccessPolicyMiddleware
+- [x] 4. (P) AccessPolicyMiddleware
   - _Boundary: AccessPolicyMiddleware_
   - Implementar `AccessPolicyMiddleware` que: verifica si `request.tenant` está presente (si no, es schema público → pasar); comprueba si la ruta está en la whitelist (`/admin/`, `/api/public/`, `/static/`, `/media/`) → pasar; llama `request.tenant.subscription.is_active()` → si `False`, retorna JSON `{"detail": "...", "code": "trial_expired"}` con status 402
   - Registrar el middleware en `MIDDLEWARE` después de `TenantMiddleware`
