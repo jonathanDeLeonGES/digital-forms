@@ -148,3 +148,81 @@ def test_tenant_clean_accepts_valid_schema_name():
     )
     # Should not raise
     tenant.clean()
+
+
+# ---------------------------------------------------------------------------
+# Plan model — RED phase: these fail until Plan is defined in models.py
+# ---------------------------------------------------------------------------
+
+def test_plan_has_trial_constant():
+    from apps.tenants.models import Plan
+    assert Plan.TRIAL == 'trial'
+
+
+def test_plan_has_enterprise_constant():
+    from apps.tenants.models import Plan
+    assert Plan.ENTERPRISE == 'enterprise'
+
+
+def test_plan_nombre_choices_contains_both_plans():
+    from apps.tenants.models import Plan
+    choice_values = [c[0] for c in Plan.NOMBRE_CHOICES]
+    assert 'trial' in choice_values
+    assert 'enterprise' in choice_values
+
+
+# ---------------------------------------------------------------------------
+# Subscription.is_active() — RED phase: fail until Subscription is defined
+# ---------------------------------------------------------------------------
+
+def _make_subscription(plan_nombre, fecha_fin=None):
+    """Build a Subscription instance without hitting the DB."""
+    from unittest.mock import MagicMock
+    from apps.tenants.models import Subscription
+    sub = Subscription.__new__(Subscription)
+    sub.plan = MagicMock()
+    sub.plan.nombre = plan_nombre
+    sub.fecha_fin = fecha_fin
+    return sub
+
+
+def test_is_active_trial_with_future_fecha_fin():
+    from datetime import date, timedelta
+    sub = _make_subscription('trial', fecha_fin=date.today() + timedelta(days=5))
+    assert sub.is_active() is True
+
+
+def test_is_active_trial_expires_today():
+    from datetime import date
+    sub = _make_subscription('trial', fecha_fin=date.today())
+    assert sub.is_active() is True
+
+
+def test_is_active_trial_expired_yesterday():
+    from datetime import date, timedelta
+    sub = _make_subscription('trial', fecha_fin=date.today() - timedelta(days=1))
+    assert sub.is_active() is False
+
+
+def test_is_active_enterprise_no_fecha_fin():
+    sub = _make_subscription('enterprise', fecha_fin=None)
+    assert sub.is_active() is True
+
+
+def test_is_active_trial_no_fecha_fin():
+    sub = _make_subscription('trial', fecha_fin=None)
+    assert sub.is_active() is False
+
+
+def test_subscription_has_num_licencias_field():
+    from apps.tenants.models import Subscription
+    field = Subscription._meta.get_field('num_licencias')
+    assert field.null is True
+    assert field.blank is True
+
+
+def test_subscription_has_fecha_fin_field():
+    from apps.tenants.models import Subscription
+    field = Subscription._meta.get_field('fecha_fin')
+    assert field.null is True
+    assert field.blank is True

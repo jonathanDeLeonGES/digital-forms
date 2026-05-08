@@ -24,7 +24,7 @@
   - `Tenant.save()` crea automáticamente el schema PostgreSQL del tenant al persistirse
   - _Requirements: 1.1, 1.3, 2.1, 2.2, 4.1_
 
-- [ ] 2.2 Implementar modelos Plan y Subscription
+- [x] 2.2 Implementar modelos Plan y Subscription
   - Crear modelo `Plan` con campo `nombre` choices (`trial`, `enterprise`), datos fijos cargados via fixture
   - Crear modelo `Subscription` con FKs a `Tenant` (OneToOne) y `Plan`, campos `fecha_inicio`, `fecha_fin` (null para Enterprise), `num_licencias` (null para Trial)
   - Implementar `Subscription.is_active()`: retorna `True` si plan es Enterprise o si `fecha_fin >= date.today()`
