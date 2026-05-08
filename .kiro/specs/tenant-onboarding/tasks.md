@@ -47,7 +47,7 @@
   - Test de integración: verificar que un fallo en la creación de `Subscription` no deja registros huérfanos
   - _Requirements: 1.1, 1.2, 1.4, 2.3_
 
-- [ ] 3.2 Implementar serializer, view y URL de registro
+- [x] 3.2 Implementar serializer, view y URL de registro
   - Crear `TenantRegistrationSerializer` con campos `nombre_empresa`, `subdominio` (con validación de formato), `email_admin`
   - Crear `TenantRegistrationView` (APIView, sin autenticación) que delega a `TenantRegistrationService` y retorna 201 con `{id, subdominio, trial_expires_at, message}` en éxito; 409 para subdominio duplicado; 400 para errores de validación
   - Registrar `POST /api/public/tenants/register/` en `urls_public.py`
