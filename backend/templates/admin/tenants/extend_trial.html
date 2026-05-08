@@ -1,0 +1,30 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<p>Se extenderá el trial de las siguientes suscripciones:</p>
+<ul>
+  {% for sub in queryset %}
+    <li>{{ sub.tenant.nombre_empresa }} — vence actualmente el {{ sub.fecha_fin|default:"—" }}</li>
+  {% endfor %}
+</ul>
+
+<form method="post">
+  {% csrf_token %}
+  {% for sub in queryset %}
+    <input type="hidden" name="{{ action_checkbox_name }}" value="{{ sub.pk }}">
+  {% endfor %}
+  <input type="hidden" name="action" value="extend_trial">
+
+  <fieldset class="module aligned">
+    {{ form.as_p }}
+  </fieldset>
+
+  <div class="submit-row">
+    <input type="submit" name="_apply" value="Aplicar" class="default">
+    <a href="javascript:history.back()" class="button cancel-link">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
