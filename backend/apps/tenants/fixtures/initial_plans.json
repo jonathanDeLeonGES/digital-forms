@@ -1,0 +1,12 @@
+[
+  {
+    "model": "tenants.plan",
+    "pk": 1,
+    "fields": {"nombre": "trial"}
+  },
+  {
+    "model": "tenants.plan",
+    "pk": 2,
+    "fields": {"nombre": "enterprise"}
+  }
+]
