@@ -1,0 +1,30 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<p>Se actualizarán los siguientes tenants:</p>
+<ul>
+  {% for tenant in queryset %}
+    <li>{{ tenant.nombre_empresa }} ({{ tenant.schema_name }})</li>
+  {% endfor %}
+</ul>
+
+<form method="post">
+  {% csrf_token %}
+  {% for tenant in queryset %}
+    <input type="hidden" name="{{ action_checkbox_name }}" value="{{ tenant.pk }}">
+  {% endfor %}
+  <input type="hidden" name="action" value="change_to_enterprise">
+
+  <fieldset class="module aligned">
+    {{ form.as_p }}
+  </fieldset>
+
+  <div class="submit-row">
+    <input type="submit" name="_apply" value="Aplicar" class="default">
+    <a href="javascript:history.back()" class="button cancel-link">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

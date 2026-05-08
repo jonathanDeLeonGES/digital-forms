@@ -62,17 +62,17 @@
   - _Requirements: 5.1, 5.2, 5.4, 5.5_
   - _Depends: 2.2_
 
-- [ ] 5. Panel de system admin (P)
+- [x] 5. Panel de system admin (P)
   - _Boundary: TenantAdmin, SubscriptionAdmin_
 
-- [ ] 5.1 Implementar TenantAdmin con gestión de plan
+- [x] 5.1 Implementar TenantAdmin con gestión de plan
   - Crear `TenantAdmin` con `list_display = [nombre_empresa, subdominio, plan_actual, estado_acceso, trial_expires_at, num_licencias]` y filtros por plan
   - Implementar acción `change_to_enterprise`: valida `num_licencias > 0`, actualiza `Subscription.plan = enterprise`, `fecha_fin = None`, `num_licencias = N`
   - Solo usuarios con `is_staff=True` y `is_superuser=True` acceden al Django Admin
   - Un superusuario puede cambiar un tenant Trial a Enterprise desde el panel y el acceso del tenant se restaura inmediatamente
   - _Requirements: 3.2, 6.1, 6.2, 6.3, 6.4_
 
-- [ ] 5.2 Implementar SubscriptionAdmin con acciones de gestión
+- [x] 5.2 Implementar SubscriptionAdmin con acciones de gestión
   - Implementar acción `extend_trial`: solicita nueva `fecha_fin` (date picker o input), valida que sea futura, actualiza `Subscription.fecha_fin`
   - Implementar acción `update_license_count`: solicita nuevo `num_licencias`, valida `> 0`, actualiza `Subscription.num_licencias`
   - Implementar validación: si `num_licencias == 0` → error con mensaje "El número de licencias debe ser mayor a cero"
