@@ -73,22 +73,22 @@
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
   - _Boundary: IshikawaView, urls.py_
 
-- [ ] 4. Frontend
-- [ ] 4.1 (P) Implementar issuesService y página de listado
+- [x] 4. Frontend
+- [x] 4.1 (P) Implementar issuesService y página de listado
   - Implementar `frontend/src/services/issues.ts` con: `getIssues(filters)`, `createIssue(data)`, `getIssue(id)`, `updateIssue(id, data)`, `transitionIssue(id, estado)`, `getIshikawa(id)`, `updateIshikawa(id, data)`
   - Implementar `IssueListPage.tsx` con tabla/lista paginada, controles de filtro (tipo, estado, gravedad, área, rango de fecha), badge de estado coloreado (`IssueStatusBadge.tsx`)
   - Observable: La página muestra los issues del tenant con filtros aplicables; el badge de estado muestra el color correcto según el estado
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
   - _Boundary: IssueListPage, issuesService_
 
-- [ ] 4.2 (P) Implementar formulario de creación/edición e Ishikawa
+- [x] 4.2 (P) Implementar formulario de creación/edición e Ishikawa
   - Implementar `IssueFormPage.tsx` con campos de Issue y sección separada de Ishikawa
   - Implementar `IshikawaForm.tsx` con 6 acordeones (uno por categoría), botón "Agregar causa" por categoría, y "Agregar subcausa" por causa
   - Observable: El formulario de creación envía `POST /api/issues/` y redirige al detalle; el componente Ishikawa permite agregar causas y subcausas a cualquiera de las 6 categorías
   - _Requirements: 1.1, 2.1, 2.2, 2.3, 2.4_
   - _Boundary: IssueFormPage, IshikawaForm_
 
-- [ ] 4.3 (P) Implementar página de detalle del Issue
+- [x] 4.3 (P) Implementar página de detalle del Issue
   - Implementar `IssueDetailPage.tsx` mostrando datos del issue, Ishikawa (si existe), historial de estados (para admin/supervisor) y botones de transición de estado según rol
   - Observable: La página detalle carga el issue, muestra el Ishikawa anidado con causas/subcausas, y los botones de transición solo aparecen para roles autorizados
   - _Requirements: 3.1, 3.2, 3.3, 3.6, 4.1, 4.2, 4.3_
