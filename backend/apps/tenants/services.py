@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 
 from .exceptions import SubdomainAlreadyExistsError
 from .models import Domain, Plan, Subscription, Tenant
@@ -21,7 +21,16 @@ class TenantRegistrationService:
             nombre_empresa=nombre_empresa,
             email_admin=email_admin,
         )
-        tenant.save()  # auto_create_schema=True → PostgreSQL schema created here
+        # transaction.atomic() crea un savepoint: si el INSERT falla por
+        # schema_name duplicado, sólo el savepoint se revierte y la transacción
+        # externa queda válida (importante en tests con TestCase).
+        try:
+            with transaction.atomic():
+                tenant.save()  # auto_create_schema=True → PostgreSQL schema created here
+        except IntegrityError:
+            raise SubdomainAlreadyExistsError(
+                f"El subdominio '{subdominio}' ya está registrado."
+            )
 
         try:
             domain = Domain(
