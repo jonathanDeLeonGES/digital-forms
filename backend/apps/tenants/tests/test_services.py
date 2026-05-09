@@ -15,15 +15,18 @@ from apps.tenants.services import TenantRegistrationService
 
 @pytest.fixture(autouse=True)
 def patch_transaction_atomic():
-    # Los unit tests de este archivo mockean Tenant/Domain/etc. sin acceso real
-    # a la DB. transaction.atomic() intenta conectar a PostgreSQL incluso cuando
-    # tenant.save() está mockeado, por lo que lo reemplazamos con un no-op.
     @contextmanager
     def noop():
         yield
 
     with patch("apps.tenants.services.transaction.atomic", noop):
         yield
+
+
+@pytest.fixture(autouse=True)
+def patch_connection():
+    with patch("apps.tenants.services.connection") as mock_conn:
+        yield mock_conn
 
 
 # ---------------------------------------------------------------------------
@@ -46,17 +49,18 @@ def _make_mock_plan():
 # Happy path
 # ---------------------------------------------------------------------------
 
+@patch("apps.tenants.services.CustomUser", create=True)
 @patch("apps.tenants.services.Subscription")
 @patch("apps.tenants.services.Plan")
 @patch("apps.tenants.services.Domain")
 @patch("apps.tenants.services.Tenant")
-def test_register_saves_tenant_with_correct_fields(MockTenant, MockDomain, MockPlan, MockSub):
+def test_register_saves_tenant_with_correct_fields(MockTenant, MockDomain, MockPlan, MockSub, MockUser):
     mock_tenant = _make_mock_tenant()
     MockTenant.return_value = mock_tenant
     MockPlan.TRIAL = "trial"
     MockPlan.objects.get.return_value = _make_mock_plan()
 
-    TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com")
+    TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com", "pass1234")
 
     MockTenant.assert_called_once_with(
         schema_name="acme",
@@ -66,17 +70,18 @@ def test_register_saves_tenant_with_correct_fields(MockTenant, MockDomain, MockP
     mock_tenant.save.assert_called_once()
 
 
+@patch("apps.tenants.services.CustomUser", create=True)
 @patch("apps.tenants.services.Subscription")
 @patch("apps.tenants.services.Plan")
 @patch("apps.tenants.services.Domain")
 @patch("apps.tenants.services.Tenant")
-def test_register_creates_domain_with_correct_url(MockTenant, MockDomain, MockPlan, MockSub):
+def test_register_creates_domain_with_correct_url(MockTenant, MockDomain, MockPlan, MockSub, MockUser):
     mock_tenant = _make_mock_tenant()
     MockTenant.return_value = mock_tenant
     MockPlan.TRIAL = "trial"
     MockPlan.objects.get.return_value = _make_mock_plan()
 
-    TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com")
+    TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com", "pass1234")
 
     MockDomain.assert_called_once_with(
         domain="acme.sgca.com",
@@ -86,18 +91,19 @@ def test_register_creates_domain_with_correct_url(MockTenant, MockDomain, MockPl
     MockDomain.return_value.save.assert_called_once()
 
 
+@patch("apps.tenants.services.CustomUser", create=True)
 @patch("apps.tenants.services.Subscription")
 @patch("apps.tenants.services.Plan")
 @patch("apps.tenants.services.Domain")
 @patch("apps.tenants.services.Tenant")
-def test_register_creates_trial_subscription_14_days(MockTenant, MockDomain, MockPlan, MockSub):
+def test_register_creates_trial_subscription_14_days(MockTenant, MockDomain, MockPlan, MockSub, MockUser):
     mock_tenant = _make_mock_tenant()
     MockTenant.return_value = mock_tenant
     MockPlan.TRIAL = "trial"
     mock_plan = _make_mock_plan()
     MockPlan.objects.get.return_value = mock_plan
 
-    TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com")
+    TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com", "pass1234")
 
     MockSub.objects.create.assert_called_once_with(
         tenant=mock_tenant,
@@ -106,17 +112,39 @@ def test_register_creates_trial_subscription_14_days(MockTenant, MockDomain, Moc
     )
 
 
+@patch("apps.tenants.services.CustomUser", create=True)
 @patch("apps.tenants.services.Subscription")
 @patch("apps.tenants.services.Plan")
 @patch("apps.tenants.services.Domain")
 @patch("apps.tenants.services.Tenant")
-def test_register_returns_tenant(MockTenant, MockDomain, MockPlan, MockSub):
+def test_register_creates_admin_user_in_tenant_schema(MockTenant, MockDomain, MockPlan, MockSub, MockUser):
     mock_tenant = _make_mock_tenant()
     MockTenant.return_value = mock_tenant
     MockPlan.TRIAL = "trial"
     MockPlan.objects.get.return_value = _make_mock_plan()
 
-    result = TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com")
+    TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com", "pass1234")
+
+    MockUser.objects.create_user.assert_called_once_with(
+        email="admin@acme.com",
+        nombre_completo="ACME Corp",
+        role="admin",
+        password="pass1234",
+    )
+
+
+@patch("apps.tenants.services.CustomUser", create=True)
+@patch("apps.tenants.services.Subscription")
+@patch("apps.tenants.services.Plan")
+@patch("apps.tenants.services.Domain")
+@patch("apps.tenants.services.Tenant")
+def test_register_returns_tenant(MockTenant, MockDomain, MockPlan, MockSub, MockUser):
+    mock_tenant = _make_mock_tenant()
+    MockTenant.return_value = mock_tenant
+    MockPlan.TRIAL = "trial"
+    MockPlan.objects.get.return_value = _make_mock_plan()
+
+    result = TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com", "pass1234")
 
     assert result is mock_tenant
 
@@ -125,12 +153,13 @@ def test_register_returns_tenant(MockTenant, MockDomain, MockPlan, MockSub):
 # Subdomain duplicate — IntegrityError on Domain.save()
 # ---------------------------------------------------------------------------
 
+@patch("apps.tenants.services.CustomUser", create=True)
 @patch("apps.tenants.services.Subscription")
 @patch("apps.tenants.services.Plan")
 @patch("apps.tenants.services.Domain")
 @patch("apps.tenants.services.Tenant")
 def test_register_raises_subdomain_error_on_integrity_error(
-    MockTenant, MockDomain, MockPlan, MockSub
+    MockTenant, MockDomain, MockPlan, MockSub, MockUser
 ):
     from django.db import IntegrityError as DjangoIntegrityError
 
@@ -139,15 +168,16 @@ def test_register_raises_subdomain_error_on_integrity_error(
     MockDomain.return_value.save.side_effect = DjangoIntegrityError("unique constraint")
 
     with pytest.raises(SubdomainAlreadyExistsError):
-        TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com")
+        TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com", "pass1234")
 
 
+@patch("apps.tenants.services.CustomUser", create=True)
 @patch("apps.tenants.services.Subscription")
 @patch("apps.tenants.services.Plan")
 @patch("apps.tenants.services.Domain")
 @patch("apps.tenants.services.Tenant")
 def test_register_deletes_tenant_on_subdomain_duplicate(
-    MockTenant, MockDomain, MockPlan, MockSub
+    MockTenant, MockDomain, MockPlan, MockSub, MockUser
 ):
     from django.db import IntegrityError as DjangoIntegrityError
 
@@ -156,16 +186,17 @@ def test_register_deletes_tenant_on_subdomain_duplicate(
     MockDomain.return_value.save.side_effect = DjangoIntegrityError("unique constraint")
 
     with pytest.raises(SubdomainAlreadyExistsError):
-        TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com")
+        TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com", "pass1234")
 
     mock_tenant.delete.assert_called_once()
 
 
+@patch("apps.tenants.services.CustomUser", create=True)
 @patch("apps.tenants.services.Subscription")
 @patch("apps.tenants.services.Plan")
 @patch("apps.tenants.services.Domain")
 @patch("apps.tenants.services.Tenant")
-def test_no_orphan_on_domain_integrity_error(MockTenant, MockDomain, MockPlan, MockSub):
+def test_no_orphan_on_domain_integrity_error(MockTenant, MockDomain, MockPlan, MockSub, MockUser):
     """Tenant must be deleted (no orphan) when domain save raises IntegrityError."""
     from django.db import IntegrityError as DjangoIntegrityError
 
@@ -174,9 +205,8 @@ def test_no_orphan_on_domain_integrity_error(MockTenant, MockDomain, MockPlan, M
     MockDomain.return_value.save.side_effect = DjangoIntegrityError("unique constraint")
 
     with pytest.raises(SubdomainAlreadyExistsError):
-        TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com")
+        TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com", "pass1234")
 
-    # Schema was cleaned up — no orphan tenant
     mock_tenant.delete.assert_called_once()
     MockSub.objects.create.assert_not_called()
 
@@ -185,12 +215,13 @@ def test_no_orphan_on_domain_integrity_error(MockTenant, MockDomain, MockPlan, M
 # Subscription failure — generic Exception
 # ---------------------------------------------------------------------------
 
+@patch("apps.tenants.services.CustomUser", create=True)
 @patch("apps.tenants.services.Subscription")
 @patch("apps.tenants.services.Plan")
 @patch("apps.tenants.services.Domain")
 @patch("apps.tenants.services.Tenant")
 def test_register_deletes_tenant_on_subscription_failure(
-    MockTenant, MockDomain, MockPlan, MockSub
+    MockTenant, MockDomain, MockPlan, MockSub, MockUser
 ):
     mock_tenant = _make_mock_tenant()
     MockTenant.return_value = mock_tenant
@@ -199,17 +230,18 @@ def test_register_deletes_tenant_on_subscription_failure(
     MockSub.objects.create.side_effect = RuntimeError("DB down")
 
     with pytest.raises(RuntimeError):
-        TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com")
+        TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com", "pass1234")
 
     mock_tenant.delete.assert_called_once()
 
 
+@patch("apps.tenants.services.CustomUser", create=True)
 @patch("apps.tenants.services.Subscription")
 @patch("apps.tenants.services.Plan")
 @patch("apps.tenants.services.Domain")
 @patch("apps.tenants.services.Tenant")
 def test_register_does_not_swallow_non_integrity_exceptions(
-    MockTenant, MockDomain, MockPlan, MockSub
+    MockTenant, MockDomain, MockPlan, MockSub, MockUser
 ):
     mock_tenant = _make_mock_tenant()
     MockTenant.return_value = mock_tenant
@@ -217,6 +249,6 @@ def test_register_does_not_swallow_non_integrity_exceptions(
     MockPlan.objects.get.side_effect = RuntimeError("trial plan missing")
 
     with pytest.raises(Exception):
-        TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com")
+        TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com", "pass1234")
 
     mock_tenant.delete.assert_called_once()

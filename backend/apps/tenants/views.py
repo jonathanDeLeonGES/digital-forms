@@ -15,11 +15,13 @@ class TenantRegistrationView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=400)
 
+        d = serializer.validated_data
         try:
             tenant = TenantRegistrationService.register(
-                nombre_empresa=serializer.validated_data["nombre_empresa"],
-                subdominio=serializer.validated_data["subdominio"],
-                email_admin=serializer.validated_data["email_admin"],
+                nombre_empresa=d["nombre_empresa"],
+                subdominio=d["subdominio"],
+                email_admin=d["email_admin"],
+                password=d["password"],
             )
         except SubdomainAlreadyExistsError as e:
             return Response(
@@ -31,8 +33,9 @@ class TenantRegistrationView(APIView):
             {
                 "id": tenant.id,
                 "subdominio": tenant.schema_name,
+                "email_admin": d["email_admin"],
                 "trial_expires_at": tenant.subscription.fecha_fin,
-                "message": "Tenant registrado exitosamente.",
+                "message": "Tenant registrado exitosamente. Ya puedes iniciar sesión.",
             },
             status=201,
         )

@@ -20,6 +20,8 @@ import pytest
 from django.test import TestCase
 from rest_framework.test import APIRequestFactory
 
+from django.db import connection
+
 from apps.tenants.models import Domain, Plan, Subscription, Tenant
 from apps.tenants.services import TenantRegistrationService
 from apps.tenants.views import TenantRegistrationView
@@ -44,6 +46,7 @@ def _payload(**overrides):
 
 def _ensure_plans():
     """Create Plan fixture rows in the public schema if not present."""
+    connection.set_schema_to_public()
     Plan.objects.get_or_create(nombre=Plan.TRIAL)
     Plan.objects.get_or_create(nombre=Plan.ENTERPRISE)
 
@@ -152,6 +155,7 @@ def test_successful_registration_creates_tenant_domain_subscription():
         nombre_empresa="Empresa Integración",
         subdominio="emp-integ",
         email_admin="admin@emp-integ.com",
+        password="Admin123!",
     )
 
     # Tenant exists with correct fields
@@ -177,6 +181,15 @@ def test_successful_registration_creates_tenant_domain_subscription():
     days_remaining = (sub.fecha_fin - date.today()).days
     assert days_remaining == 14
 
+    # Admin user was created in the tenant schema
+    from django.db import connection
+    from apps.users.models import CustomUser
+    connection.set_tenant(db_tenant)
+    admin_user = CustomUser.objects.get(email="admin@emp-integ.com")
+    assert admin_user.role == "admin"
+    assert admin_user.is_active is True
+    assert admin_user.check_password("Admin123!")
+
 
 @pytest.mark.django_db(transaction=True)
 def test_duplicate_subdomain_raises_409_and_leaves_no_orphans():
@@ -194,6 +207,7 @@ def test_duplicate_subdomain_raises_409_and_leaves_no_orphans():
         nombre_empresa="Primera Empresa",
         subdominio="dup-sub",
         email_admin="first@dup-sub.com",
+        password="Admin123!",
     )
 
     tenant_count_before = Tenant.objects.filter(schema_name="dup-sub").count()
@@ -208,6 +222,7 @@ def test_duplicate_subdomain_raises_409_and_leaves_no_orphans():
             nombre_empresa="Segunda Empresa",
             subdominio="dup-sub",
             email_admin="second@dup-sub.com",
+            password="Admin123!",
         )
 
     # Counts must not have changed — no orphan tenant or domain
@@ -235,6 +250,7 @@ def test_subscription_failure_leaves_no_orphan_tenant():
             nombre_empresa="Broken Corp",
             subdominio="broken-corp",
             email_admin="admin@broken-corp.com",
+            password="Admin123!",
         )
 
     # Service must have called tenant.delete() — no orphan tenant or domain

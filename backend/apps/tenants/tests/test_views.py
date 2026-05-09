@@ -20,6 +20,7 @@ def _valid_payload():
         "nombre_empresa": "ACME Corp",
         "subdominio": "acme",
         "email_admin": "admin@acme.com",
+        "password": "Admin123!",
     }
 
 
@@ -48,7 +49,7 @@ def test_register_response_body_has_required_fields(MockService):
     MockService.register.return_value = _make_mock_tenant()
     request = factory.post("/api/public/tenants/register/", _valid_payload(), format="json")
     response = view(request)
-    for field in ("id", "subdominio", "trial_expires_at", "message"):
+    for field in ("id", "subdominio", "email_admin", "trial_expires_at", "message"):
         assert field in response.data, f"Missing field: {field}"
 
 
@@ -69,6 +70,7 @@ def test_register_delegates_to_service_with_correct_args(MockService):
         nombre_empresa="ACME Corp",
         subdominio="acme",
         email_admin="admin@acme.com",
+        password="Admin123!",
     )
 
 
