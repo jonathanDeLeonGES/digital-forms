@@ -105,6 +105,14 @@
   - Test: request a tenant Enterprise → HTTP 200 (siempre activo)
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
+- [x] 8. Landing page pública (frontend)
+- [x] 8.1 Implementar LandingPage en `/`
+  - Crear `frontend/src/pages/Landing/LandingPage.tsx` con: nombre/tagline del producto, botón "Registrar mi empresa" → `/register`, sección "Ya tengo cuenta" con input de subdominio + botón que redirige a `{subdomain}.{baseDomain}/login`
+  - La URL de destino se construye desde `window.location` para funcionar en dev (localhost) y producción (sgca.com)
+  - Actualizar `App.tsx`: agregar ruta `/` → `<LandingPage />`; cambiar redirect `*` de `/login` a `/` para visitantes sin ruta válida
+  - Observable: en `localhost:5173/`, la página muestra el producto y permite ingresar un subdominio para ir al login de ese tenant
+  - _Requirements: tenant-onboarding 1.3_
+
 - [x] 7.3 Tests E2E del ciclo completo de tenant
   - Test E2E: registrar tenant → acceder al subdominio → verificar acceso activo
   - Test E2E: trial vence → acceso bloqueado → system admin extiende trial → acceso restaurado
