@@ -194,6 +194,7 @@ class TenantRegistrationLifecycleDBTests(TestCase):
             nombre_empresa="ACME Corp",
             subdominio="acmee2e",
             email_admin="admin@acme.com",
+            password="Admin123!",
         )
 
         self.assertIsNotNone(tenant.pk)
@@ -226,6 +227,7 @@ class TenantRegistrationLifecycleDBTests(TestCase):
             nombre_empresa="First Corp",
             subdominio="duptest",
             email_admin="first@corp.com",
+            password="Admin123!",
         )
 
         with self.assertRaises(SubdomainAlreadyExistsError):
@@ -233,6 +235,7 @@ class TenantRegistrationLifecycleDBTests(TestCase):
                 nombre_empresa="Second Corp",
                 subdominio="duptest",
                 email_admin="second@corp.com",
+                password="Admin123!",
             )
 
         # Only one Tenant with schema_name='duptest' must exist.

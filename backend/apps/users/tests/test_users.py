@@ -22,10 +22,10 @@ def _ensure_plans():
     Plan.objects.get_or_create(nombre=Plan.ENTERPRISE)
 
 
-def _register_tenant(schema, nombre, email_admin):
+def _register_tenant(schema, nombre, email_admin, password='Admin123!'):
     connection.set_schema_to_public()
     _ensure_plans()
-    return TenantRegistrationService.register(nombre, schema, email_admin)
+    return TenantRegistrationService.register(nombre, schema, email_admin, password)
 
 
 def _create_user(tenant, email, role='admin', password='pass123!', nombre='Test User'):
@@ -36,6 +36,12 @@ def _create_user(tenant, email, role='admin', password='pass123!', nombre='Test 
         role=role,
         password=password,
     )
+
+
+def _get_admin(tenant, email):
+    """Fetch the admin user created during tenant registration."""
+    connection.set_tenant(tenant)
+    return CustomUser.objects.get(email=email)
 
 
 def _client_for_tenant(tenant, user=None, domain=None):
@@ -149,7 +155,7 @@ def test_login_same_email_different_schemas_are_isolated():
 @pytest.mark.django_db(transaction=True)
 def test_admin_creates_user_returns_201():
     tenant = _register_tenant('umcreate', 'UM Create', 'admin@umcreate.com')
-    admin = _create_user(tenant, 'admin@umcreate.com')
+    admin = _get_admin(tenant, 'admin@umcreate.com')
     client = _client_for_tenant(tenant, admin)
 
     resp = client.post('/api/users/', {
@@ -167,7 +173,7 @@ def test_admin_creates_user_returns_201():
 @pytest.mark.django_db(transaction=True)
 def test_create_user_invalid_fields_returns_400():
     tenant = _register_tenant('uminvalid', 'UM Invalid', 'admin@uminvalid.com')
-    admin = _create_user(tenant, 'admin@uminvalid.com')
+    admin = _get_admin(tenant, 'admin@uminvalid.com')
     client = _client_for_tenant(tenant, admin)
 
     resp = client.post('/api/users/', {'email': 'not-an-email'}, format='json')
@@ -177,7 +183,7 @@ def test_create_user_invalid_fields_returns_400():
 @pytest.mark.django_db(transaction=True)
 def test_create_user_duplicate_email_returns_400():
     tenant = _register_tenant('umdup', 'UM Dup', 'admin@umdup.com')
-    admin = _create_user(tenant, 'admin@umdup.com')
+    admin = _get_admin(tenant, 'admin@umdup.com')
     _create_user(tenant, 'existing@umdup.com')
 
     client = _client_for_tenant(tenant, admin)
@@ -193,7 +199,7 @@ def test_create_user_duplicate_email_returns_400():
 @pytest.mark.django_db(transaction=True)
 def test_deactivate_user_sets_is_active_false():
     tenant = _register_tenant('umdeact', 'UM Deact', 'admin@umdeact.com')
-    admin = _create_user(tenant, 'admin@umdeact.com')
+    admin = _get_admin(tenant, 'admin@umdeact.com')
     user = _create_user(tenant, 'user@umdeact.com', role='responsable')
     client = _client_for_tenant(tenant, admin)
 
@@ -208,7 +214,7 @@ def test_deactivate_user_sets_is_active_false():
 @pytest.mark.django_db(transaction=True)
 def test_deactivated_user_cannot_login():
     tenant = _register_tenant('umdeactlogin', 'UM Deact Login', 'admin@umdeactlogin.com')
-    admin = _create_user(tenant, 'admin@umdeactlogin.com')
+    admin = _get_admin(tenant, 'admin@umdeactlogin.com')
     user = _create_user(tenant, 'user@umdeactlogin.com', password='secret!')
     client = _client_for_tenant(tenant, admin)
 
@@ -234,7 +240,7 @@ def test_non_admin_cannot_list_users_returns_403():
 @pytest.mark.django_db(transaction=True)
 def test_enterprise_plan_at_limit_blocks_new_user():
     tenant = _register_tenant('umlimit', 'UM Limit', 'admin@umlimit.com')
-    admin = _create_user(tenant, 'admin@umlimit.com')
+    admin = _get_admin(tenant, 'admin@umlimit.com')
 
     # Switch to enterprise plan with limit 1 (admin is the 1 active user)
     connection.set_schema_to_public()
@@ -260,7 +266,7 @@ def test_enterprise_plan_at_limit_blocks_new_user():
 @pytest.mark.django_db(transaction=True)
 def test_trial_plan_has_no_license_limit():
     tenant = _register_tenant('umtrial', 'UM Trial', 'admin@umtrial.com')
-    admin = _create_user(tenant, 'admin@umtrial.com')
+    admin = _get_admin(tenant, 'admin@umtrial.com')
 
     # Trial plan with num_licencias=1 should NOT block creation
     connection.set_schema_to_public()
@@ -283,7 +289,7 @@ def test_trial_plan_has_no_license_limit():
 @pytest.mark.django_db(transaction=True)
 def test_after_deactivate_can_add_under_enterprise_limit():
     tenant = _register_tenant('umdeact2', 'UM Deact 2', 'admin@umdeact2.com')
-    admin = _create_user(tenant, 'admin@umdeact2.com')
+    admin = _get_admin(tenant, 'admin@umdeact2.com')
     extra = _create_user(tenant, 'extra@umdeact2.com', role='responsable')
 
     # Set enterprise plan limit = 2 (admin + extra = 2, at limit)
