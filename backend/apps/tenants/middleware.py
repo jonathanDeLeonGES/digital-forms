@@ -16,7 +16,12 @@ class AccessPolicyMiddleware:
         if any(request.path.startswith(prefix) for prefix in self.WHITELIST):
             return self.get_response(request)
 
-        if not tenant.subscription.is_active():
+        try:
+            active = tenant.subscription.is_active()
+        except Exception:
+            active = False
+
+        if not active:
             return JsonResponse(
                 {
                     "detail": (

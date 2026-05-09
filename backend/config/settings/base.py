@@ -3,6 +3,7 @@ Base settings for SGCA SaaS.
 django-tenants schema-per-tenant configuration.
 """
 import os
+from datetime import timedelta
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -26,13 +27,16 @@ SHARED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'apps.users',                            # CustomUser needed in public schema for admin FKs
 ]
 
 # Apps disponibles en cada schema privado de tenant.
-# django.contrib.contenttypes es requerido por django-tenants en schemas de tenant.
-# Wave 2+ agrega aquí las apps de negocio (issues, acciones, etc.)
+# django.contrib.contenttypes requerido por django-tenants.
+# token_blacklist per-tenant: cada tenant tiene su propia blacklist de refresh tokens.
 TENANT_APPS = [
     'django.contrib.contenttypes',
+    'apps.users',
+    'rest_framework_simplejwt.token_blacklist',
 ]
 
 # django-tenants recomienda deduplicar: las apps en SHARED_APPS no se repiten.
@@ -40,6 +44,8 @@ INSTALLED_APPS = list(SHARED_APPS) + [app for app in TENANT_APPS if app not in S
 
 TENANT_MODEL = 'tenants.Tenant'
 TENANT_DOMAIN_MODEL = 'tenants.Domain'
+
+AUTH_USER_MODEL = 'users.CustomUser'
 
 # ---------------------------------------------------------------------------
 # Middleware — TenantMainMiddleware MUST be first
@@ -81,8 +87,21 @@ DATABASES = {
 }
 
 # ---------------------------------------------------------------------------
-# Authentication
+# Authentication & JWT
 # ---------------------------------------------------------------------------
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': False,
+}
+
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
