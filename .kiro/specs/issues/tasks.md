@@ -114,7 +114,7 @@
   - _Requirements: 1.1, 1.2, 3.2, 3.4, 4.1, 4.2, 4.3, 4.4, 5.1, 5.6, 6.2, 6.3_
   - _Boundary: IssueViewSet, IshikawaView_
 
-- [ ]* 5.3 (P) Tests E2E del flujo completo
+- [x] 5.3 (P) Tests E2E del flujo completo
   - E2E: Usuario crea issue → admin transiciona estados hasta "Cerrado" → historial completo visible
   - E2E: Responsable crea issue → no ve issues de otro responsable en la lista
   - E2E: PUT Ishikawa con 3 categorías → GET muestra las 6 con 3 vacías y 3 con causas
