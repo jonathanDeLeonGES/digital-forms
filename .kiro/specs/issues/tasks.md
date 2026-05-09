@@ -1,7 +1,7 @@
 # Implementation Plan
 
-- [ ] 1. Fundación: app Django y modelos de datos
-- [ ] 1.1 Crear la app Django `issues` con sus modelos
+- [x] 1. Fundación: app Django y modelos de datos
+- [x] 1.1 Crear la app Django `issues` con sus modelos
   - Crear directorio `backend/apps/issues/` con `__init__.py`, `apps.py`
   - Definir `Issue` (TenantModel) con campos: tipo, titulo, descripcion, fecha_evento, area, gravedad, estado, reportado_por (FK CustomUser), created_at, updated_at
   - Definir `DiagramaIshikawa` (TenantModel) con OneToOneField a Issue (CASCADE)
@@ -11,14 +11,14 @@
   - Observable: `python manage.py makemigrations issues` genera migración sin errores; todos los modelos heredan de TenantModel
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 3.5, 6.1_
 
-- [ ] 1.2 Migrar y registrar la app en settings
+- [x] 1.2 Migrar y registrar la app en settings
   - Añadir `'apps.issues'` a TENANT_APPS en `backend/config/settings/base.py`
   - Ejecutar `migrate_schemas --shared` para aplicar migración al schema público (no aplica, solo tenant) — ejecutar `migrate_schemas` para schemas de tenant
   - Observable: La migración se aplica sin errores; las tablas `issues_issue`, `issues_diagramaishikawa`, `issues_causaraiz`, `issues_subcausa`, `issues_historialtransicionissue` existen en el schema del tenant de prueba
   - _Requirements: 6.1, 6.2_
 
-- [ ] 2. Lógica de negocio: IssueService
-- [ ] 2.1 Implementar IssueService — CRUD y visibilidad por rol
+- [x] 2. Lógica de negocio: IssueService
+- [x] 2.1 Implementar IssueService — CRUD y visibilidad por rol
   - Implementar `create_issue(tipo, titulo, descripcion, fecha_evento, area, gravedad, reportado_por) -> Issue`
   - Implementar `update_issue(issue, data, requesting_user) -> Issue` con verificación de permisos por rol
   - Implementar `queryset_for_user(user) -> QuerySet[Issue]`: admin/supervisor → todos; responsable → solo propios; verificador → todos (read-only enforcement en la vista)
@@ -26,7 +26,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 4.1, 4.2, 4.3, 6.2, 6.3_
   - _Boundary: IssueService_
 
-- [ ] 2.2 Implementar IssueService — transiciones de estado
+- [x] 2.2 Implementar IssueService — transiciones de estado
   - Implementar `transition_state(issue, nuevo_estado, requesting_user, comentario='') -> Issue`
   - Validar contra `Issue.TRANSICIONES_VALIDAS`; lanzar `InvalidTransitionError` si no es válida
   - Verificar que solo admin/supervisor pueden realizar transiciones a/desde estados avanzados
@@ -35,7 +35,7 @@
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
   - _Boundary: IssueService_
 
-- [ ] 2.3 Implementar IssueService — upsert Ishikawa
+- [x] 2.3 Implementar IssueService — upsert Ishikawa
   - Implementar `upsert_ishikawa(issue, causas_por_categoria) -> DiagramaIshikawa`
   - Crear `DiagramaIshikawa` si no existe
   - Hacer upsert de CausaRaiz por categoría: crear las nuevas, actualizar las existentes, eliminar las removidas del payload de su categoría
@@ -44,8 +44,8 @@
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
   - _Boundary: IssueService_
 
-- [ ] 3. API REST: serializers, filtros y ViewSets
-- [ ] 3.1 (P) Implementar serializers y filtros
+- [x] 3. API REST: serializers, filtros y ViewSets
+- [x] 3.1 (P) Implementar serializers y filtros
   - Implementar `IssueListSerializer` (campos de listado sin descripción ni ishikawa)
   - Implementar `IssueDetailSerializer` (incluye ishikawa anidado y historial para admin/supervisor)
   - Implementar `IssueWriteSerializer` con validación de choices
@@ -55,7 +55,7 @@
   - _Requirements: 1.5, 2.1, 5.1, 5.2, 5.3, 5.4, 5.5_
   - _Boundary: serializers.py, filters.py_
 
-- [ ] 3.2 (P) Implementar IssueViewSet
+- [x] 3.2 (P) Implementar IssueViewSet
   - Crear `IssueViewSet` (ModelViewSet) usando `IssueService.queryset_for_user(request.user)` como base queryset
   - Aplicar `permission_classes`: `IsAuthenticated` + `RequireRole` según acción (create: todos; update/delete: admin/supervisor/responsable propio)
   - Implementar acción custom `transition` (POST `/{id}/transition/`)
@@ -65,7 +65,7 @@
   - _Requirements: 1.1, 3.2, 3.3, 4.1, 4.2, 4.3, 4.4, 5.1, 5.6_
   - _Boundary: IssueViewSet_
 
-- [ ] 3.3 (P) Implementar IshikawaView y URLs
+- [x] 3.3 (P) Implementar IshikawaView y URLs
   - Crear `IshikawaView` (APIView): GET retorna 404 si no existe; PUT llama `IssueService.upsert_ishikawa()`
   - Crear `backend/apps/issues/urls.py` con routes para IssueViewSet e IshikawaView
   - Registrar en `backend/config/urls_tenant.py`
@@ -94,8 +94,8 @@
   - _Requirements: 3.1, 3.2, 3.3, 3.6, 4.1, 4.2, 4.3_
   - _Boundary: IssueDetailPage_
 
-- [ ] 5. Tests de backend
-- [ ] 5.1 (P) Tests de modelos y servicio
+- [x] 5. Tests de backend
+- [x] 5.1 (P) Tests de modelos y servicio
   - Test: `Issue.TRANSICIONES_VALIDAS` cubre todos los estados; transiciones inválidas detectadas
   - Test: `IssueService.queryset_for_user()` — admin ve todos, responsable ve solo los suyos
   - Test: `IssueService.upsert_ishikawa()` — preserva categorías no enviadas; cascade delete de SubCausa al eliminar CausaRaiz
@@ -104,7 +104,7 @@
   - _Requirements: 1.3, 2.4, 2.5, 2.6, 3.1, 3.4, 3.5_
   - _Boundary: IssueService, modelos_
 
-- [ ] 5.2 (P) Tests de API — endpoints y permisos
+- [x] 5.2 (P) Tests de API — endpoints y permisos
   - Test: `POST /api/issues/` con todos los campos → 201; campo faltante → 400
   - Test: `GET /api/issues/` con filtros por tipo, estado, área, gravedad → retorna solo matching
   - Test: Responsable solo ve sus issues; verificador ve todos en read-only (PUT → 403)

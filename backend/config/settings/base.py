@@ -27,6 +27,7 @@ SHARED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'django_filters',
     'apps.users',                            # CustomUser needed in public schema for admin FKs
 ]
 
@@ -37,6 +38,7 @@ TENANT_APPS = [
     'django.contrib.contenttypes',
     'apps.users',
     'rest_framework_simplejwt.token_blacklist',
+    'apps.issues',
 ]
 
 # django-tenants recomienda deduplicar: las apps en SHARED_APPS no se repiten.
@@ -93,6 +95,11 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
 }
 
 SIMPLE_JWT = {
