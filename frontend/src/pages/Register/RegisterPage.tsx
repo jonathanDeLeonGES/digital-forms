@@ -4,12 +4,14 @@ interface FormState {
   nombre_empresa: string
   subdominio: string
   email_admin: string
+  password: string
 }
 
 interface FormErrors {
   nombre_empresa?: string[]
   subdominio?: string[]
   email_admin?: string[]
+  password?: string[]
   non_field?: string[]
 }
 
@@ -42,6 +44,12 @@ function validateForm(form: FormState): FormErrors {
     errors.email_admin = ['Ingrese un email válido.']
   }
 
+  if (!form.password) {
+    errors.password = ['La contraseña es requerida.']
+  } else if (form.password.length < 8) {
+    errors.password = ['La contraseña debe tener al menos 8 caracteres.']
+  }
+
   return errors
 }
 
@@ -67,6 +75,7 @@ export default function RegisterPage() {
     nombre_empresa: '',
     subdominio: '',
     email_admin: '',
+    password: '',
   })
   const [errors, setErrors] = useState<FormErrors>({})
   const [loading, setLoading] = useState(false)
@@ -75,7 +84,6 @@ export default function RegisterPage() {
   function handleChange(e: ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target
     if (name === 'subdominio') {
-      // Normalize: lowercase, strip invalid chars
       const normalized = value.toLowerCase().replace(/[^a-z0-9-]/g, '')
       setForm((prev) => ({ ...prev, subdominio: normalized }))
     } else {
@@ -234,6 +242,25 @@ export default function RegisterPage() {
               }`}
             />
             <FieldErrors messages={errors.email_admin} />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              Contraseña del administrador
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              value={form.password}
+              onChange={handleChange}
+              placeholder="Mínimo 8 caracteres"
+              className={`w-full rounded-lg border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.password ? 'border-red-400' : 'border-gray-300'
+              }`}
+            />
+            <FieldErrors messages={errors.password} />
           </div>
 
           <button
