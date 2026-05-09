@@ -176,12 +176,21 @@ def test_plan_nombre_choices_contains_both_plans():
 # ---------------------------------------------------------------------------
 
 def _make_subscription(plan_nombre, fecha_fin=None):
-    """Build a Subscription instance without hitting the DB."""
-    from unittest.mock import MagicMock
-    from apps.tenants.models import Subscription
+    """Build a Subscription instance without hitting the DB.
+
+    Django 5.x valida que el valor asignado a un FK sea una instancia del
+    modelo relacionado, por lo que MagicMock() ya no es válido.
+    Usamos Plan.__new__(Plan) para crear una instancia real sin persistirla
+    y set_cached_value() para inyectarla en la caché interna del descriptor
+    FK, evitando la validación de tipo y cualquier consulta a la DB.
+    """
+    from django.db.models.base import ModelState
+    from apps.tenants.models import Plan, Subscription
     sub = Subscription.__new__(Subscription)
-    sub.plan = MagicMock()
-    sub.plan.nombre = plan_nombre
+    sub._state = ModelState()  # __new__ no llama a __init__, _state no existe
+    plan = Plan.__new__(Plan)
+    plan.nombre = plan_nombre
+    Subscription._meta.get_field("plan").set_cached_value(sub, plan)
     sub.fecha_fin = fecha_fin
     return sub
 

@@ -2,6 +2,7 @@ from datetime import date
 
 from django import forms
 from django.contrib import admin
+from django.contrib.admin import helpers
 from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
 
@@ -96,7 +97,7 @@ class TenantAdmin(admin.ModelAdmin):
         if request.POST.get("_apply"):
             form = ChangeToEnterpriseForm(request.POST)
             if form.is_valid():
-                selected_ids = request.POST.getlist(admin.ACTION_CHECKBOX_NAME)
+                selected_ids = request.POST.getlist(helpers.ACTION_CHECKBOX_NAME)
                 targets = Tenant.objects.filter(pk__in=selected_ids).select_related(
                     "subscription__plan"
                 )
@@ -125,7 +126,7 @@ class TenantAdmin(admin.ModelAdmin):
                 "title": "Cambiar a Enterprise",
                 "queryset": queryset,
                 "form": form,
-                "action_checkbox_name": admin.ACTION_CHECKBOX_NAME,
+                "action_checkbox_name": helpers.ACTION_CHECKBOX_NAME,
                 "opts": self.model._meta,
             },
         )
@@ -151,7 +152,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
         if request.POST.get("_apply"):
             form = ExtendTrialForm(request.POST)
             if form.is_valid():
-                selected_ids = request.POST.getlist(admin.ACTION_CHECKBOX_NAME)
+                selected_ids = request.POST.getlist(helpers.ACTION_CHECKBOX_NAME)
                 targets = Subscription.objects.filter(pk__in=selected_ids)
                 fecha_fin = form.cleaned_data["fecha_fin"]
                 count = targets.update(fecha_fin=fecha_fin)
@@ -170,7 +171,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
                 "title": "Extender período de trial",
                 "queryset": queryset,
                 "form": form,
-                "action_checkbox_name": admin.ACTION_CHECKBOX_NAME,
+                "action_checkbox_name": helpers.ACTION_CHECKBOX_NAME,
                 "opts": self.model._meta,
             },
         )
@@ -180,7 +181,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
         if request.POST.get("_apply"):
             form = UpdateLicenseCountForm(request.POST)
             if form.is_valid():
-                selected_ids = request.POST.getlist(admin.ACTION_CHECKBOX_NAME)
+                selected_ids = request.POST.getlist(helpers.ACTION_CHECKBOX_NAME)
                 targets = Subscription.objects.filter(pk__in=selected_ids)
                 num_licencias = form.cleaned_data["num_licencias"]
                 count = targets.update(num_licencias=num_licencias)
@@ -199,7 +200,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
                 "title": "Actualizar número de licencias",
                 "queryset": queryset,
                 "form": form,
-                "action_checkbox_name": admin.ACTION_CHECKBOX_NAME,
+                "action_checkbox_name": helpers.ACTION_CHECKBOX_NAME,
                 "opts": self.model._meta,
             },
         )

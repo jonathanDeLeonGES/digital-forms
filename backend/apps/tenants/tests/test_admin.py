@@ -164,6 +164,7 @@ def test_change_to_enterprise_updates_subscriptions_on_apply(MockTenant, MockPla
     MockTenant.objects.filter.return_value.select_related.return_value = [mock_tenant_obj]
 
     request = MagicMock()
+    request.get_full_path.return_value = "/admin/tenants/tenant/"
     request.POST.get.return_value = "1"  # _apply present
     request.POST.__getitem__ = MagicMock(return_value="10")
     request.POST.getlist.return_value = ["1"]

@@ -16,14 +16,20 @@ def test_shared_apps_contains_django_tenants():
     assert 'django_tenants' in settings.SHARED_APPS
 
 
-def test_tenant_apps_is_empty_for_wave1():
-    assert isinstance(settings.TENANT_APPS, (list, tuple))
+def test_tenant_apps_contains_contenttypes():
+    # django-tenants requiere contenttypes en schemas de tenant (Wave 2+
+    # agrega aquí las apps de negocio). Ver docs de django-tenants.
+    assert 'django.contrib.contenttypes' in settings.TENANT_APPS
 
 
-def test_installed_apps_is_shared_plus_tenant():
-    expected = list(settings.SHARED_APPS) + list(settings.TENANT_APPS)
+def test_installed_apps_is_shared_plus_tenant_deduplicated():
+    # INSTALLED_APPS = SHARED_APPS + (TENANT_APPS que no estén ya en SHARED_APPS)
+    # Deduplicar es necesario porque contenttypes puede estar en ambas listas.
+    expected = list(settings.SHARED_APPS) + [
+        app for app in settings.TENANT_APPS if app not in settings.SHARED_APPS
+    ]
     assert list(settings.INSTALLED_APPS) == expected, (
-        "INSTALLED_APPS must equal SHARED_APPS + TENANT_APPS"
+        "INSTALLED_APPS must equal SHARED_APPS + deduplicated TENANT_APPS"
     )
 
 

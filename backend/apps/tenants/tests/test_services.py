@@ -3,6 +3,7 @@ RED phase: tests for TenantRegistrationService.
 Before services.py exists, all tests fail with ImportError.
 After implementation, all pass via static analysis (Django not installed in shell).
 """
+from contextlib import contextmanager
 from datetime import date, timedelta
 from unittest.mock import MagicMock, call, patch
 
@@ -10,6 +11,19 @@ import pytest
 
 from apps.tenants.exceptions import SubdomainAlreadyExistsError
 from apps.tenants.services import TenantRegistrationService
+
+
+@pytest.fixture(autouse=True)
+def patch_transaction_atomic():
+    # Los unit tests de este archivo mockean Tenant/Domain/etc. sin acceso real
+    # a la DB. transaction.atomic() intenta conectar a PostgreSQL incluso cuando
+    # tenant.save() está mockeado, por lo que lo reemplazamos con un no-op.
+    @contextmanager
+    def noop():
+        yield
+
+    with patch("apps.tenants.services.transaction.atomic", noop):
+        yield
 
 
 # ---------------------------------------------------------------------------

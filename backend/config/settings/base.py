@@ -28,10 +28,15 @@ SHARED_APPS = [
     'rest_framework',
 ]
 
-# Apps that live ONLY in each tenant's private schema (Wave 2+)
-TENANT_APPS = []
+# Apps disponibles en cada schema privado de tenant.
+# django.contrib.contenttypes es requerido por django-tenants en schemas de tenant.
+# Wave 2+ agrega aquí las apps de negocio (issues, acciones, etc.)
+TENANT_APPS = [
+    'django.contrib.contenttypes',
+]
 
-INSTALLED_APPS = list(SHARED_APPS) + list(TENANT_APPS)
+# django-tenants recomienda deduplicar: las apps en SHARED_APPS no se repiten.
+INSTALLED_APPS = list(SHARED_APPS) + [app for app in TENANT_APPS if app not in SHARED_APPS]
 
 TENANT_MODEL = 'tenants.Tenant'
 TENANT_DOMAIN_MODEL = 'tenants.Domain'
