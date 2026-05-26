@@ -3,6 +3,21 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { accionesService, type AccionDetail, type HistorialEstadoEntry } from '../../services/acciones'
 import { AccionStatusBadge } from '../../components/acciones/AccionStatusBadge'
 import { useAuth } from '../../context/AuthContext'
+import { fetchWithAuth } from '../../services/fetchWithAuth'
+
+interface UserOption {
+  id: number
+  nombre_completo: string
+  email: string
+  role: string
+}
+
+async function fetchUsers(): Promise<UserOption[]> {
+  const resp = await fetchWithAuth('/api/users/')
+  if (!resp.ok) return []
+  const data = await resp.json()
+  return Array.isArray(data) ? data : (data.results ?? [])
+}
 
 const TIPO_LABELS: Record<string, string> = {
   correctiva: 'Correctiva',
@@ -17,14 +32,35 @@ const ESTADO_LABELS: Record<string, string> = {
   verificado: 'Verificado',
 }
 
-function canTransition(role: string, accionResponsableId: number, userId: number, currentEstado: string): string | null {
+function isResponsableTemporalActivo(
+  responsableTemporalId: number | undefined,
+  responsableTemporalHasta: string | null | undefined,
+  userId: number,
+): boolean {
+  if (!responsableTemporalId || !responsableTemporalHasta) return false
+  if (responsableTemporalId !== userId) return false
+  return new Date(responsableTemporalHasta) >= new Date(new Date().toDateString())
+}
+
+function canTransition(
+  role: string,
+  accionResponsableId: number,
+  userId: number,
+  currentEstado: string,
+  responsableTemporalId?: number | null,
+  responsableTemporalHasta?: string | null,
+): string | null {
   if (role === 'admin') {
     if (currentEstado === 'abierto') return 'en_proceso'
     if (currentEstado === 'en_proceso') return 'cerrado'
     if (currentEstado === 'cerrado') return 'verificado'
     return null
   }
-  if (role === 'responsable' && accionResponsableId === userId && currentEstado === 'abierto') return 'en_proceso'
+  if (currentEstado === 'abierto') {
+    const esResponsable = accionResponsableId === userId
+    const esResponsableTemporal = isResponsableTemporalActivo(responsableTemporalId ?? undefined, responsableTemporalHasta, userId)
+    if (esResponsable || esResponsableTemporal) return 'en_proceso'
+  }
   if (role === 'supervisor' && currentEstado === 'en_proceso') return 'cerrado'
   if (role === 'verificador' && currentEstado === 'cerrado') return 'verificado'
   return null
@@ -74,6 +110,67 @@ function TransitionModal({ nextEstado, onConfirm, onClose, loading }: Transition
   )
 }
 
+interface AssignResponsableTemporalModalProps {
+  users: UserOption[]
+  onConfirm: (userId: number, hasta: string) => void
+  onClose: () => void
+  loading: boolean
+}
+
+function AssignResponsableTemporalModal({ users, onConfirm, onClose, loading }: AssignResponsableTemporalModalProps) {
+  const [selectedUserId, setSelectedUserId] = useState<number>(0)
+  const [hasta, setHasta] = useState('')
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Asignar responsable temporal</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+            <select
+              value={selectedUserId || ''}
+              onChange={(e) => setSelectedUserId(Number(e.target.value))}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            >
+              <option value="">Seleccionar usuario...</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.nombre_completo} ({u.role})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Válido hasta</label>
+            <input
+              type="date"
+              value={hasta}
+              onChange={(e) => setHasta(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 mt-6">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => selectedUserId && hasta && onConfirm(selectedUserId, hasta)}
+            disabled={loading || !selectedUserId || !hasta}
+            className="px-4 py-2 text-sm rounded-lg bg-amber-500 text-white font-semibold hover:bg-amber-600 disabled:opacity-50"
+          >
+            {loading ? 'Guardando...' : 'Asignar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function AccionDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -87,8 +184,14 @@ export default function AccionDetailPage() {
   const [transitionError, setTransitionError] = useState('')
   const [transitioning, setTransitioning] = useState(false)
 
+  const [showAssignTempModal, setShowAssignTempModal] = useState(false)
+  const [tempUsers, setTempUsers] = useState<UserOption[]>([])
+  const [assigningTemp, setAssigningTemp] = useState(false)
+  const [tempError, setTempError] = useState('')
+
   const accionId = Number(id)
   const canViewHistorial = user?.role === 'admin' || user?.role === 'supervisor'
+  const isAdmin = user?.role === 'admin'
 
   useEffect(() => {
     let cancelled = false
@@ -115,8 +218,58 @@ export default function AccionDetailPage() {
   }, [accionId, canViewHistorial])
 
   const nextEstado = accion && user
-    ? canTransition(user.role, accion.responsable.id, Number(user.id), accion.estado)
+    ? canTransition(
+        user.role,
+        accion.responsable.id,
+        Number(user.id),
+        accion.estado,
+        accion.responsable_temporal?.id,
+        accion.responsable_temporal_hasta,
+      )
     : null
+
+  async function handleOpenAssignTemp() {
+    if (tempUsers.length === 0) {
+      const users = await fetchUsers()
+      setTempUsers(users)
+    }
+    setShowAssignTempModal(true)
+    setTempError('')
+  }
+
+  async function handleAssignTemp(userId: number, hasta: string) {
+    if (!accion) return
+    setAssigningTemp(true)
+    setTempError('')
+    try {
+      const updated = await accionesService.assignResponsableTemporal(accion.id, {
+        responsable_temporal_id: userId,
+        responsable_temporal_hasta: hasta,
+      })
+      setAccion(updated)
+      setShowAssignTempModal(false)
+    } catch (err: unknown) {
+      const e = err as { data?: { detail?: string }; message?: string }
+      setTempError(e?.data?.detail ?? e?.message ?? 'Error al asignar responsable temporal.')
+    } finally {
+      setAssigningTemp(false)
+    }
+  }
+
+  async function handleRemoveTemp() {
+    if (!accion) return
+    setAssigningTemp(true)
+    setTempError('')
+    try {
+      const updated = await accionesService.removeResponsableTemporal(accion.id)
+      setAccion(updated)
+    } catch (err: unknown) {
+      const e = err as { data?: { detail?: string }; message?: string }
+      setTempError(e?.data?.detail ?? e?.message ?? 'Error al remover responsable temporal.')
+    } finally {
+      setAssigningTemp(false)
+    }
+  }
 
   async function handleTransitionConfirm(comentario: string) {
     if (!accion || !nextEstado) return
@@ -205,6 +358,12 @@ export default function AccionDetailPage() {
           </div>
         )}
 
+        {tempError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-sm text-red-700">
+            {tempError}
+          </div>
+        )}
+
         {/* Detalle */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
           <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
@@ -223,6 +382,44 @@ export default function AccionDetailPage() {
             <div>
               <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider">Responsable</dt>
               <dd className="mt-1 text-sm text-gray-900">{accion.responsable.nombre_completo}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                Responsable temporal
+                <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
+                  Temporal
+                </span>
+              </dt>
+              <dd className="mt-1 text-sm text-gray-900">
+                {accion.responsable_temporal ? (
+                  <span className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium">{accion.responsable_temporal.nombre_completo}</span>
+                    <span className="text-gray-400 text-xs">hasta {accion.responsable_temporal_hasta}</span>
+                    {isAdmin && accion.estado !== 'verificado' && (
+                      <button
+                        onClick={handleRemoveTemp}
+                        disabled={assigningTemp}
+                        className="text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
+                      >
+                        Remover
+                      </button>
+                    )}
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <span className="text-gray-400 italic">Sin asignar</span>
+                    {isAdmin && accion.estado !== 'verificado' && (
+                      <button
+                        onClick={handleOpenAssignTemp}
+                        disabled={assigningTemp}
+                        className="text-xs text-amber-600 hover:text-amber-700 font-medium disabled:opacity-50"
+                      >
+                        + Asignar
+                      </button>
+                    )}
+                  </span>
+                )}
+              </dd>
             </div>
             <div>
               <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha límite</dt>
@@ -279,6 +476,15 @@ export default function AccionDetailPage() {
           onConfirm={handleTransitionConfirm}
           onClose={() => setShowModal(false)}
           loading={transitioning}
+        />
+      )}
+
+      {showAssignTempModal && (
+        <AssignResponsableTemporalModal
+          users={tempUsers}
+          onConfirm={handleAssignTemp}
+          onClose={() => setShowAssignTempModal(false)}
+          loading={assigningTemp}
         />
       )}
     </div>

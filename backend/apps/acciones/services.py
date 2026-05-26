@@ -88,6 +88,26 @@ class AccionService:
         return accion
 
     @staticmethod
+    def assign_responsable_temporal(accion: Accion, responsable_temporal, hasta, requesting_user) -> Accion:
+        if requesting_user.role != 'admin':
+            raise PermissionDenied('Solo el admin puede asignar un responsable temporal.')
+        if accion.estado == 'verificado':
+            raise ValidationError({'detail': 'Las acciones verificadas no pueden ser modificadas.'})
+        accion.responsable_temporal = responsable_temporal
+        accion.responsable_temporal_hasta = hasta
+        accion.save(update_fields=['responsable_temporal', 'responsable_temporal_hasta', 'updated_at'])
+        return accion
+
+    @staticmethod
+    def remove_responsable_temporal(accion: Accion, requesting_user) -> Accion:
+        if requesting_user.role != 'admin':
+            raise PermissionDenied('Solo el admin puede remover el responsable temporal.')
+        accion.responsable_temporal = None
+        accion.responsable_temporal_hasta = None
+        accion.save(update_fields=['responsable_temporal', 'responsable_temporal_hasta', 'updated_at'])
+        return accion
+
+    @staticmethod
     def _validate_transition(accion: Accion, nuevo_estado: str, requesting_user) -> None:
         validos = Accion.TRANSICIONES_VALIDAS.get(accion.estado, [])
         if nuevo_estado not in validos:
@@ -105,9 +125,17 @@ class AccionService:
         rol_requerido = Accion.ROLES_TRANSICION.get(key)
 
         if rol_requerido == 'responsable_asignado':
-            if accion.responsable_id != requesting_user.pk:
+            from datetime import date as date_class
+            es_responsable = accion.responsable_id == requesting_user.pk
+            es_responsable_temporal = (
+                accion.responsable_temporal_id is not None
+                and accion.responsable_temporal_id == requesting_user.pk
+                and accion.responsable_temporal_hasta is not None
+                and accion.responsable_temporal_hasta >= date_class.today()
+            )
+            if not (es_responsable or es_responsable_temporal):
                 raise PermissionDenied(
-                    'Solo el responsable asignado o admin pueden iniciar esta acción.'
+                    'Solo el responsable asignado, responsable temporal activo o admin pueden iniciar esta acción.'
                 )
         elif rol_requerido == 'supervisor':
             if requesting_user.role != 'supervisor':

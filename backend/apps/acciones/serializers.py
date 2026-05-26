@@ -26,16 +26,27 @@ class AccionListSerializer(serializers.ModelSerializer):
     responsable = UserBasicSerializer(read_only=True)
     issue = IssueBasicSerializer(read_only=True)
     resultado_esperado_resumen = serializers.SerializerMethodField()
+    responsable_temporal = serializers.SerializerMethodField()
+    responsable_temporal_hasta = serializers.DateField(read_only=True, allow_null=True)
 
     class Meta:
         model = Accion
         fields = [
             'id', 'tipo', 'resultado_esperado_resumen', 'responsable',
+            'responsable_temporal', 'responsable_temporal_hasta',
             'estado', 'fecha_limite', 'issue', 'created_at',
         ]
 
     def get_resultado_esperado_resumen(self, obj):
         return obj.resultado_esperado[:150]
+
+    def get_responsable_temporal(self, obj):
+        if not obj.responsable_temporal_id:
+            return None
+        return {
+            'id': obj.responsable_temporal.id,
+            'nombre_completo': obj.responsable_temporal.nombre_completo,
+        }
 
 
 class AccionDetailSerializer(serializers.ModelSerializer):
@@ -43,14 +54,25 @@ class AccionDetailSerializer(serializers.ModelSerializer):
     issue = IssueBasicSerializer(read_only=True)
     created_by = UserBasicSerializer(read_only=True)
     historial_estados = serializers.SerializerMethodField()
+    responsable_temporal = serializers.SerializerMethodField()
+    responsable_temporal_hasta = serializers.DateField(read_only=True, allow_null=True)
 
     class Meta:
         model = Accion
         fields = [
-            'id', 'tipo', 'resultado_esperado', 'responsable', 'estado',
-            'fecha_limite', 'issue', 'created_by', 'created_at', 'updated_at',
-            'historial_estados',
+            'id', 'tipo', 'resultado_esperado', 'responsable',
+            'responsable_temporal', 'responsable_temporal_hasta',
+            'estado', 'fecha_limite', 'issue', 'created_by',
+            'created_at', 'updated_at', 'historial_estados',
         ]
+
+    def get_responsable_temporal(self, obj):
+        if not obj.responsable_temporal_id:
+            return None
+        return {
+            'id': obj.responsable_temporal.id,
+            'nombre_completo': obj.responsable_temporal.nombre_completo,
+        }
 
     def get_historial_estados(self, obj):
         request = self.context.get('request')
@@ -82,3 +104,14 @@ class AccionWriteSerializer(serializers.Serializer):
 class TransitionSerializer(serializers.Serializer):
     estado = serializers.ChoiceField(choices=Accion.ESTADOS)
     comentario = serializers.CharField(required=False, default='', allow_blank=True)
+
+
+class AssignResponsableTemporalSerializer(serializers.Serializer):
+    responsable_temporal_id = serializers.IntegerField()
+    responsable_temporal_hasta = serializers.DateField()
+
+    def validate_responsable_temporal_id(self, value):
+        from apps.users.models import CustomUser
+        if not CustomUser.objects.filter(pk=value).exists():
+            raise serializers.ValidationError('El usuario no existe en este tenant.')
+        return value

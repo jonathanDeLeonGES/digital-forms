@@ -33,6 +33,14 @@ class Accion(models.Model):
     responsable = models.ForeignKey(
         'users.CustomUser', on_delete=models.PROTECT, related_name='acciones_asignadas'
     )
+    responsable_temporal = models.ForeignKey(
+        'users.CustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='acciones_responsable_temporal',
+    )
+    responsable_temporal_hasta = models.DateField(null=True, blank=True)
     fecha_limite = models.DateField()
     estado = models.CharField(max_length=20, choices=ESTADOS, default='abierto')
     created_by = models.ForeignKey(

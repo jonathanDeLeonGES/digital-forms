@@ -13,6 +13,7 @@ from .serializers import (
     AccionDetailSerializer,
     AccionListSerializer,
     AccionWriteSerializer,
+    AssignResponsableTemporalSerializer,
     HistorialEstadoSerializer,
     TransitionSerializer,
 )
@@ -29,7 +30,7 @@ class AccionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return AccionService.queryset_for_user(self.request.user).select_related(
-            'responsable', 'issue', 'created_by'
+            'responsable', 'responsable_temporal', 'issue', 'created_by'
         )
 
     def get_serializer_class(self):
@@ -117,3 +118,24 @@ class AccionViewSet(viewsets.ModelViewSet):
         accion = self.get_object()
         data = HistorialEstadoSerializer(accion.historial_estados.all(), many=True).data
         return Response(data)
+
+    @action(detail=True, methods=['post', 'delete'], url_path='responsable-temporal')
+    def responsable_temporal(self, request, pk=None):
+        accion = self.get_object()
+        if request.user.role != 'admin':
+            return Response(
+                {'detail': 'Solo el admin puede gestionar el responsable temporal.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if request.method == 'DELETE':
+            accion = AccionService.remove_responsable_temporal(accion, request.user)
+            return Response(AccionDetailSerializer(accion, context={'request': request}).data)
+
+        serializer = AssignResponsableTemporalSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        d = serializer.validated_data
+        responsable_temp = CustomUser.objects.get(pk=d['responsable_temporal_id'])
+        accion = AccionService.assign_responsable_temporal(
+            accion, responsable_temp, d['responsable_temporal_hasta'], request.user
+        )
+        return Response(AccionDetailSerializer(accion, context={'request': request}).data)

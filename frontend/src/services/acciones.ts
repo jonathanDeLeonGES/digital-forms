@@ -22,12 +22,19 @@ export interface HistorialEstadoEntry {
   comentario: string
 }
 
+export interface UserBasicNullable {
+  id: number
+  nombre_completo: string
+}
+
 export interface AccionListItem {
   id: number
   issue: IssueBasic
   tipo: string
   resultado_esperado_resumen: string
   responsable: UserBasic
+  responsable_temporal: UserBasicNullable | null
+  responsable_temporal_hasta: string | null
   fecha_limite: string
   estado: string
   created_at: string
@@ -39,6 +46,8 @@ export interface AccionDetail {
   tipo: string
   resultado_esperado: string
   responsable: UserBasic
+  responsable_temporal: UserBasicNullable | null
+  responsable_temporal_hasta: string | null
   fecha_limite: string
   estado: string
   created_by: number
@@ -102,6 +111,24 @@ export const accionesService = {
 
   async getHistorial(id: number): Promise<HistorialEstadoEntry[]> {
     const resp = await fetchWithAuth(`/api/acciones/${id}/historial/`)
+    return handleResponse(resp)
+  },
+
+  async assignResponsableTemporal(
+    id: number,
+    data: { responsable_temporal_id: number; responsable_temporal_hasta: string },
+  ): Promise<AccionDetail> {
+    const resp = await fetchWithAuth(`/api/acciones/${id}/responsable-temporal/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    return handleResponse(resp)
+  },
+
+  async removeResponsableTemporal(id: number): Promise<AccionDetail> {
+    const resp = await fetchWithAuth(`/api/acciones/${id}/responsable-temporal/`, {
+      method: 'DELETE',
+    })
     return handleResponse(resp)
   },
 }
