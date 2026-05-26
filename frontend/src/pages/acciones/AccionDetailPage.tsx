@@ -182,6 +182,12 @@ export default function AccionDetailPage() {
                 Mover a {ESTADO_LABELS[nextEstado]}
               </button>
             )}
+            <Link
+              to={`/acciones/${accion.id}/plan`}
+              className="rounded-lg border border-blue-300 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 transition-colors"
+            >
+              Plan de Trabajo
+            </Link>
             {canEdit && (
               <Link
                 to={`/acciones/${accion.id}/edit`}
