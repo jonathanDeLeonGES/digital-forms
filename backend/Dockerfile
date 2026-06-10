@@ -14,6 +14,8 @@ RUN pip install --no-cache-dir -r requirements/dev.txt
 
 # El entrypoint se instala antes del código para que la capa también se
 # cachée independientemente de cambios en el código de la aplicación.
+
+#COn esto se cambia el plan de trabajo.
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
