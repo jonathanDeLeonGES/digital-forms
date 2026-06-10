@@ -48,7 +48,7 @@ services:
       - ./frontend/src:/app/src
       - ./frontend/index.html:/app/index.html
     ports:
-      - "5173:5173"
+      - "5174:5173"
     depends_on:
       - backend
 
