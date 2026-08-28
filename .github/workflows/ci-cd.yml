@@ -1,0 +1,118 @@
+name: CI/CD
+
+on:
+  pull_request:
+    branches: [master, main]
+  push:
+    branches: [master, main]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: sgca
+          POSTGRES_USER: sgca
+          POSTGRES_PASSWORD: sgca_dev_password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U sgca -d sgca"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 5
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+      DJANGO_SECRET_KEY: ci-secret-key
+      DB_NAME: sgca
+      DB_USER: sgca
+      DB_PASSWORD: sgca_dev_password
+      DB_HOST: localhost
+      DB_PORT: 5432
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar dependencias
+        run: pip install -r requirements/dev.txt
+      - name: Lint (ruff)
+        run: ruff check .
+      - name: Aplicar migraciones del schema publico
+        run: python manage.py migrate_schemas --shared
+      - name: Ejecutar tests
+        run: pytest --maxfail=1 -q
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+
+  notify-pr:
+    if: github.event_name == 'pull_request'
+    needs: [backend-tests, frontend-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notificar a Slack
+        run: |
+          if [ -z "${SLACK_WEBHOOK_URL}" ]; then
+            echo "SLACK_WEBHOOK_URL no configurado, se omite notificacion."
+            exit 0
+          fi
+          curl -sf -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"PR #${{ github.event.pull_request.number }} '${{ github.event.pull_request.title }}' - CI en verde, lista para revision/deploy.\"}" \
+            "${SLACK_WEBHOOK_URL}"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  docker-build:
+    needs: [backend-tests, frontend-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend image
+        run: docker build -t digital-forms-backend:${{ github.sha }} ./backend
+      - name: Build frontend image
+        run: docker build -t digital-forms-frontend:${{ github.sha }} ./frontend
+
+  deploy:
+    needs: [docker-build]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy
+        run: |
+          echo "TODO: reemplazar este paso con el deploy real (registry + ECS/K8s/VM/App Service)."
+          echo "Aqui se asumen credenciales de despliegue como secrets del repo."
+      - name: Notificar a Slack (resultado del deploy)
+        if: always()
+        run: |
+          if [ -z "${SLACK_WEBHOOK_URL}" ]; then
+            echo "SLACK_WEBHOOK_URL no configurado, se omite notificacion."
+            exit 0
+          fi
+          STATUS="${{ job.status }}"
+          curl -sf -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"Deploy ${STATUS} para digital-forms @ ${{ github.sha }}\"}" \
+            "${SLACK_WEBHOOK_URL}"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
