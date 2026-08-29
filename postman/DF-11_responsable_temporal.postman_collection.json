@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "2845c671-9de2-4e92-bad8-4d700d22f9f8",
     "name": "DF-11 - Responsable Temporal (boundary bug)",
-    "description": "Coleccion para reproducir y verificar el bug reportado en DF-11: un responsable temporal no puede iniciar una accion el ultimo dia de su asignacion (responsable_temporal_hasta), recibiendo 403 Forbidden en vez del 200 esperado.\n\nAntes de correr:\n1. Define collection variable 'base_url' con el subdominio del tenant de pruebas (ej. http://demo.localhost:8000).\n2. Define 'admin_email' / 'admin_password' de un usuario admin del tenant.\n3. Define 'temp_user_email' / 'temp_user_password' de un usuario que se usara como responsable temporal.\n4. Ejecuta 'Login admin', luego 'Crear accion abierta' (o usa un accion_id existente en estado 'abierto') y 'Asignar responsable temporal (hasta = hoy)'.\n5. Ejecuta 'Login responsable temporal' y luego 'Transicion a en_proceso (repro bug)'.",
+    "description": "Reproduccion DF-11/DF-57: un responsable temporal debe poder iniciar una accion durante todo el dia hasta, inclusive. Configurar base_url del tenant, credenciales admin y temporal, temp_user_id y accion_id de una accion abierta asignada a un usuario distinto. La variable today usa America/Guatemala por defecto; se puede especificar YYYY-MM-DD para otro caso. Para datos desechables en Docker Compose: python postman/verify_responsable_temporal.py.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "10411939",
     "_collection_link": "https://go.postman.co/collection/10411939-2845c671-9de2-4e92-bad8-4d700d22f9f8?source=collection_link"
@@ -17,7 +17,7 @@
             "exec": [
               "const data = pm.response.json();",
               "if (data.access) { pm.collectionVariables.set('admin_token', data.access); }",
-              "pm.test('login admin OK', () => pm.response.code === 200);"
+              "pm.test('login admin OK', () => { pm.response.to.have.status(200); });"
             ],
             "type": "text/javascript"
           }
@@ -57,7 +57,7 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('asignacion OK (200)', () => pm.response.code === 200);"
+              "pm.test('asignacion OK', () => { pm.response.to.have.status(200); });"
             ],
             "type": "text/javascript"
           }
@@ -77,7 +77,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"responsable_temporal_id\": {{temp_user_id}},\n  \"responsable_temporal_hasta\": \"{{$isoTimestamp}}\"\n}"
+          "raw": "{\n  \"responsable_temporal_id\": {{temp_user_id}},\n  \"responsable_temporal_hasta\": \"{{today}}\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/api/acciones/{{accion_id}}/responsable-temporal/",
@@ -92,7 +92,7 @@
             ""
           ]
         },
-        "description": "Ajusta 'responsable_temporal_hasta' manualmente a la fecha de HOY en formato YYYY-MM-DD antes de enviar; {{$isoTimestamp}} incluye hora y no es un formato de fecha valido para este campo."
+        "description": "Fecha inclusiva YYYY-MM-DD (today), sin hora."
       },
       "response": []
     },
@@ -105,7 +105,7 @@
             "exec": [
               "const data = pm.response.json();",
               "if (data.access) { pm.collectionVariables.set('temp_token', data.access); }",
-              "pm.test('login temporal OK', () => pm.response.code === 200);"
+              "pm.test('login temporal OK', () => { pm.response.to.have.status(200); });"
             ],
             "type": "text/javascript"
           }
@@ -145,8 +145,10 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('DF-11 corregido: 200 esperado, no 403', () => pm.response.code === 200);",
-              "if (pm.response.code === 403) { console.warn('Reproducido: 403 Forbidden en el ultimo dia de asignacion temporal (DF-11).'); }"
+              "pm.test('DF-57: ultimo dia inclusivo', () => {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json().estado).to.eql('en_proceso');",
+              "});"
             ],
             "type": "text/javascript"
           }
@@ -226,6 +228,21 @@
     {
       "key": "today",
       "value": ""
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const configured = pm.collectionVariables.get('today');",
+          "const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {",
+          "  timeZone: 'America/Guatemala', year: 'numeric', month: '2-digit', day: '2-digit'",
+          "}).formatToParts(new Date()).map(part => [part.type, part.value]));",
+          "pm.variables.set('today', configured || `${parts.year}-${parts.month}-${parts.day}`);"
+        ]
+      }
     }
   ]
 }

@@ -2,9 +2,9 @@ name: CI/CD
 
 on:
   pull_request:
-    branches: [master, main]
+    branches: [master, main, scenario/df-11-responsable-temporal-boundary]
   push:
-    branches: [master, main]
+    branches: [master, main, scenario/df-11-responsable-temporal-boundary]
 
 jobs:
   backend-tests:
@@ -66,9 +66,48 @@ jobs:
       - run: npm run build
       - run: npm test
 
+  compose-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Preparar entorno local sin credenciales externas
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('.env.dev')
+          prefixes = ('DJANGO_', 'DB_', 'TENANT_BASE_DOMAIN=', 'REDIS_URL=')
+          lines = [line for line in path.read_text().splitlines() if line.startswith(prefixes)]
+          path.write_text('\n'.join(lines) + '\n')
+          PY
+      - name: Iniciar Docker Compose
+        run: docker compose -p df57-ci up -d --build
+      - name: Verificar DF-57 por HTTP con datos desechables
+        run: |
+          mkdir -p evidence
+          python postman/verify_responsable_temporal.py 2>&1 | tee evidence/http.jsonl
+      - name: Recopilar logs de Compose
+        if: always()
+        run: |
+          mkdir -p evidence
+          docker compose -p df57-ci ps -a > evidence/compose-status.txt
+          docker compose -p df57-ci logs --no-color backend > evidence/backend.log 2>&1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: df57-compose-evidence
+          path: evidence/
+          retention-days: 14
+      - name: Limpiar entorno desechable
+        if: always()
+        run: docker compose -p df57-ci down --volumes --remove-orphans
+
   notify-pr:
     if: github.event_name == 'pull_request'
-    needs: [backend-tests, frontend-tests]
+    needs: [backend-tests, frontend-tests, compose-regression]
     runs-on: ubuntu-latest
     steps:
       - name: Notificar a Slack
@@ -84,7 +123,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   docker-build:
-    needs: [backend-tests, frontend-tests]
+    needs: [backend-tests, frontend-tests, compose-regression]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

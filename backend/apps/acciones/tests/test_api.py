@@ -1,6 +1,9 @@
 """Tests de integración de API para acciones (Task 7.2 & 7.3)."""
+from datetime import timedelta
+
 import pytest
 from django.db import connection
+from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -156,6 +159,48 @@ def test_transition_valid_updates_state():
     )
     assert r.status_code == 200
     assert r.data['estado'] == 'en_proceso'
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize('offset, expected_status', [(-1, 403), (0, 200), (1, 200)],
+                         ids=['expired', 'last-day', 'future'])
+def test_transition_temporary_assignment_boundary(offset, expected_status):
+    tenant = _register(f'aapitemp{offset + 1}', 'AAPITEMP', 'admin@aapitemp.com')
+    admin = _get_user(tenant, 'admin@aapitemp.com')
+    permanent = _make_user(tenant, 'permanent@aapitemp.com', 'responsable')
+    temporary = _make_user(tenant, 'temporary@aapitemp.com', 'responsable')
+    issue = _make_issue(tenant, admin, estado='en_analisis')
+    connection.set_tenant(tenant)
+    accion = AccionService.create_accion(
+        issue, 'correctiva', 'res', permanent, '2026-12-31', admin,
+    )
+    until = timezone.localdate() + timedelta(days=offset)
+    admin_client = _client(tenant, admin)
+    assignment = admin_client.post(
+        f'/api/acciones/{accion.id}/responsable-temporal/',
+        {'responsable_temporal_id': temporary.pk,
+         'responsable_temporal_hasta': until.isoformat()},
+        format='json',
+    )
+    assert assignment.status_code == 200
+
+    response = _client(tenant, temporary).post(
+        f'/api/acciones/{accion.id}/transition/',
+        {'estado': 'en_proceso', 'comentario': 'DF-57'},
+        format='json',
+    )
+    assert response.status_code == expected_status
+    connection.set_tenant(tenant)
+    accion.refresh_from_db()
+    if expected_status == 200:
+        assert response.data['estado'] == accion.estado == 'en_proceso'
+        history = accion.historial_estados.get()
+        assert history.usuario_id == temporary.pk
+        assert (history.estado_anterior, history.estado_nuevo) == ('abierto', 'en_proceso')
+        assert history.comentario == 'DF-57'
+    else:
+        assert accion.estado == 'abierto'
+        assert not accion.historial_estados.exists()
 
 
 @pytest.mark.django_db(transaction=True)

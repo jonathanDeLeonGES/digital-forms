@@ -1,6 +1,10 @@
 """Tests unitarios del servicio AccionService (Task 7.1)."""
+from datetime import date, datetime, timedelta, timezone as datetime_timezone
+
 import pytest
 from django.db import connection
+from django.utils import timezone
+from rest_framework.exceptions import PermissionDenied
 
 from apps.tenants.models import Plan
 from apps.tenants.services import TenantRegistrationService
@@ -192,6 +196,73 @@ def test_validate_transition_other_responsable_cannot_start():
     connection.set_tenant(tenant)
     with pytest.raises(PermissionDenied):
         AccionService.transition_state(accion, 'en_proceso', resp2)
+
+
+@pytest.mark.parametrize(
+    'offset, actor_id, role, assigned, allowed',
+    [
+        (-1, 2, 'responsable', True, False),
+        (0, 2, 'responsable', True, True),
+        (1, 2, 'responsable', True, True),
+        (None, 2, 'responsable', True, False),
+        (0, 3, 'responsable', True, False),
+        (0, 2, 'responsable', False, False),
+        (-1, 1, 'responsable', True, True),
+        (-1, 3, 'admin', True, True),
+    ],
+    ids=['expired', 'last-day', 'future', 'missing-date', 'other-user',
+         'missing-assignee', 'permanent-responsible', 'admin'],
+)
+def test_validate_transition_temporary_assignment_boundary(
+    monkeypatch, offset, actor_id, role, assigned, allowed,
+):
+    from apps.users.models import CustomUser
+
+    today = date(2026, 8, 29)
+    now = datetime(2026, 8, 29, 18, tzinfo=datetime_timezone.utc)
+    monkeypatch.setattr(timezone, 'now', lambda: now)
+    accion = Accion(
+        estado='abierto', responsable_id=1,
+        responsable_temporal_id=2 if assigned else None,
+        responsable_temporal_hasta=(
+            today + timedelta(days=offset) if offset is not None else None
+        ),
+    )
+    user = CustomUser(id=actor_id, role=role)
+
+    with timezone.override('America/Guatemala'):
+        if allowed:
+            AccionService._validate_transition(accion, 'en_proceso', user)
+        else:
+            with pytest.raises(PermissionDenied):
+                AccionService._validate_transition(accion, 'en_proceso', user)
+
+
+@pytest.mark.parametrize(
+    'now, allowed',
+    [
+        (datetime(2026, 8, 29, 6, tzinfo=datetime_timezone.utc), True),
+        (datetime(2026, 8, 30, 5, 59, 59, tzinfo=datetime_timezone.utc), True),
+        (datetime(2026, 8, 30, 6, tzinfo=datetime_timezone.utc), False),
+    ],
+    ids=['start-of-last-day', 'end-of-last-day', 'next-day'],
+)
+def test_validate_transition_temporary_assignment_uses_local_day(monkeypatch, now, allowed):
+    from apps.users.models import CustomUser
+
+    monkeypatch.setattr(timezone, 'now', lambda: now)
+    accion = Accion(
+        estado='abierto', responsable_id=1, responsable_temporal_id=2,
+        responsable_temporal_hasta=date(2026, 8, 29),
+    )
+    user = CustomUser(id=2, role='responsable')
+
+    with timezone.override('America/Guatemala'):
+        if allowed:
+            AccionService._validate_transition(accion, 'en_proceso', user)
+        else:
+            with pytest.raises(PermissionDenied):
+                AccionService._validate_transition(accion, 'en_proceso', user)
 
 
 @pytest.mark.django_db(transaction=True)
