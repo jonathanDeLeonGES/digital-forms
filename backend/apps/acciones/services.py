@@ -1,5 +1,6 @@
 from datetime import date
 
+from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from .exceptions import InvalidTransitionError
@@ -126,13 +127,12 @@ class AccionService:
         rol_requerido = Accion.ROLES_TRANSICION.get(key)
 
         if rol_requerido == 'responsable_asignado':
-            from datetime import date as date_class
             es_responsable = accion.responsable_id == requesting_user.pk
             es_responsable_temporal = (
                 accion.responsable_temporal_id is not None
                 and accion.responsable_temporal_id == requesting_user.pk
                 and accion.responsable_temporal_hasta is not None
-                and accion.responsable_temporal_hasta > date_class.today()
+                and accion.responsable_temporal_hasta >= timezone.localdate()
             )
             if not (es_responsable or es_responsable_temporal):
                 raise PermissionDenied(

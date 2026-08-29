@@ -23,7 +23,7 @@ interface Props {
   canManage: boolean
 }
 
-export function ActividadCard({ actividad, userRole, userId, onChanged, canManage }: Props) {
+export function ActividadCard({ actividad, userId, onChanged, canManage }: Props) {
   const [evidencias, setEvidencias] = useState<EvidenciaItem[] | null>(null)
   const [showEvidencias, setShowEvidencias] = useState(false)
   const [transitioning, setTransitioning] = useState(false)

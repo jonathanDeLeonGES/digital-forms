@@ -86,6 +86,7 @@ jobs:
       - name: Iniciar Docker Compose
         run: docker compose -p df57-ci up -d --build
       - name: Verificar DF-57 por HTTP con datos desechables
+        shell: bash
         run: |
           mkdir -p evidence
           python postman/verify_responsable_temporal.py 2>&1 | tee evidence/http.jsonl
