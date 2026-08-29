@@ -89,6 +89,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p evidence
+          docker compose -p df57-ci exec -T backend pytest apps/acciones/tests -k temporary_assignment -q 2>&1 | tee evidence/pytest.txt
           python postman/verify_responsable_temporal.py 2>&1 | tee evidence/http.jsonl
       - name: Recopilar logs de Compose
         if: always()
@@ -107,7 +108,7 @@ jobs:
         run: docker compose -p df57-ci down --volumes --remove-orphans
 
   notify-pr:
-    if: github.event_name == 'pull_request'
+    if: always() && github.event_name == 'pull_request'
     needs: [backend-tests, frontend-tests, compose-regression]
     runs-on: ubuntu-latest
     steps:
@@ -117,11 +118,29 @@ jobs:
             echo "SLACK_WEBHOOK_URL no configurado, se omite notificacion."
             exit 0
           fi
+          python - <<'PY' > slack-message.json
+          import json
+          import os
+          text = (
+              f"PR #{os.environ['PR_NUMBER']}: {os.environ['PR_TITLE']}\n"
+              f"Triage, correccion y evidencia: {os.environ['PR_URL']}\n"
+              f"Backend: {os.environ['BACKEND_RESULT']}; "
+              f"frontend: {os.environ['FRONTEND_RESULT']}; "
+              f"reproduccion Docker Compose: {os.environ['COMPOSE_RESULT']}.\n"
+              "Despliegue: no ejecutado (pull request)."
+          )
+          print(json.dumps({'text': text}))
+          PY
           curl -sf -X POST -H 'Content-type: application/json' \
-            --data "{\"text\":\"PR #${{ github.event.pull_request.number }} '${{ github.event.pull_request.title }}' - CI en verde, lista para revision/deploy.\"}" \
-            "${SLACK_WEBHOOK_URL}"
+            --data-binary @slack-message.json "${SLACK_WEBHOOK_URL}"
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          BACKEND_RESULT: ${{ needs.backend-tests.result }}
+          FRONTEND_RESULT: ${{ needs.frontend-tests.result }}
+          COMPOSE_RESULT: ${{ needs.compose-regression.result }}
 
   docker-build:
     needs: [backend-tests, frontend-tests, compose-regression]
