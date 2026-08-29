@@ -53,7 +53,8 @@ class AccionService:
     def queryset_for_user(user):
         qs = Accion.objects.all()
         if user.role == 'responsable':
-            qs = qs.filter(responsable=user)
+            from django.db.models import Q
+            qs = qs.filter(Q(responsable=user) | Q(responsable_temporal=user))
         return qs
 
     @staticmethod
