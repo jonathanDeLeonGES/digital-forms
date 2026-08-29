@@ -1,32 +1,15 @@
 {
   "info": {
+    "_postman_id": "2845c671-9de2-4e92-bad8-4d700d22f9f8",
     "name": "DF-11 - Responsable Temporal (boundary bug)",
     "description": "Coleccion para reproducir y verificar el bug reportado en DF-11: un responsable temporal no puede iniciar una accion el ultimo dia de su asignacion (responsable_temporal_hasta), recibiendo 403 Forbidden en vez del 200 esperado.\n\nAntes de correr:\n1. Define collection variable 'base_url' con el subdominio del tenant de pruebas (ej. http://demo.localhost:8000).\n2. Define 'admin_email' / 'admin_password' de un usuario admin del tenant.\n3. Define 'temp_user_email' / 'temp_user_password' de un usuario que se usara como responsable temporal.\n4. Ejecuta 'Login admin', luego 'Crear accion abierta' (o usa un accion_id existente en estado 'abierto') y 'Asignar responsable temporal (hasta = hoy)'.\n5. Ejecuta 'Login responsable temporal' y luego 'Transicion a en_proceso (repro bug)'.",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "10411939",
+    "_collection_link": "https://go.postman.co/collection/10411939-2845c671-9de2-4e92-bad8-4d700d22f9f8?source=collection_link"
   },
-  "variable": [
-    { "key": "base_url", "value": "http://demo.localhost:8000" },
-    { "key": "admin_email", "value": "" },
-    { "key": "admin_password", "value": "" },
-    { "key": "temp_user_email", "value": "" },
-    { "key": "temp_user_password", "value": "" },
-    { "key": "admin_token", "value": "" },
-    { "key": "temp_token", "value": "" },
-    { "key": "accion_id", "value": "" },
-    { "key": "temp_user_id", "value": "" }
-  ],
   "item": [
     {
       "name": "1. Login admin",
-      "request": {
-        "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "url": "{{base_url}}/api/auth/login/",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
-        }
-      },
       "event": [
         {
           "listen": "test",
@@ -35,48 +18,86 @@
               "const data = pm.response.json();",
               "if (data.access) { pm.collectionVariables.set('admin_token', data.access); }",
               "pm.test('login admin OK', () => pm.response.code === 200);"
-            ]
+            ],
+            "type": "text/javascript"
           }
         }
-      ]
-    },
-    {
-      "name": "2. Asignar responsable temporal (hasta = hoy)",
+      ],
       "request": {
         "method": "POST",
         "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
         ],
-        "url": "{{base_url}}/api/acciones/{{accion_id}}/responsable-temporal/",
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"responsable_temporal_id\": {{temp_user_id}},\n  \"responsable_temporal_hasta\": \"{{$isoTimestamp}}\"\n}"
+          "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
         },
-        "description": "Ajusta 'responsable_temporal_hasta' manualmente a la fecha de HOY en formato YYYY-MM-DD antes de enviar; {{$isoTimestamp}} incluye hora y no es un formato de fecha valido para este campo."
+        "url": {
+          "raw": "{{base_url}}/api/auth/login/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login",
+            ""
+          ]
+        }
       },
+      "response": []
+    },
+    {
+      "name": "2. Asignar responsable temporal (hasta = hoy)",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('asignacion OK (200)', () => pm.response.code === 200);"
-            ]
+            ],
+            "type": "text/javascript"
           }
         }
-      ]
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"responsable_temporal_id\": {{temp_user_id}},\n  \"responsable_temporal_hasta\": \"{{$isoTimestamp}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/acciones/{{accion_id}}/responsable-temporal/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "acciones",
+            "{{accion_id}}",
+            "responsable-temporal",
+            ""
+          ]
+        },
+        "description": "Ajusta 'responsable_temporal_hasta' manualmente a la fecha de HOY en formato YYYY-MM-DD antes de enviar; {{$isoTimestamp}} incluye hora y no es un formato de fecha valido para este campo."
+      },
+      "response": []
     },
     {
       "name": "3. Login responsable temporal",
-      "request": {
-        "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "url": "{{base_url}}/api/auth/login/",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"email\": \"{{temp_user_email}}\",\n  \"password\": \"{{temp_user_password}}\"\n}"
-        }
-      },
       "event": [
         {
           "listen": "test",
@@ -85,26 +106,40 @@
               "const data = pm.response.json();",
               "if (data.access) { pm.collectionVariables.set('temp_token', data.access); }",
               "pm.test('login temporal OK', () => pm.response.code === 200);"
-            ]
+            ],
+            "type": "text/javascript"
           }
         }
-      ]
-    },
-    {
-      "name": "4. Transicion a en_proceso (repro bug DF-11)",
+      ],
       "request": {
         "method": "POST",
         "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer {{temp_token}}" }
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
         ],
-        "url": "{{base_url}}/api/acciones/{{accion_id}}/transition/",
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"estado\": \"en_proceso\",\n  \"comentario\": \"Repro DF-11: intento el ultimo dia de la asignacion temporal\"\n}"
+          "raw": "{\n  \"email\": \"{{temp_user_email}}\",\n  \"password\": \"{{temp_user_password}}\"\n}"
         },
-        "description": "Esperado: 200 OK (el responsable temporal sigue vigente el dia 'hasta'). Con el bug: 403 Forbidden."
+        "url": {
+          "raw": "{{base_url}}/api/auth/login/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login",
+            ""
+          ]
+        }
       },
+      "response": []
+    },
+    {
+      "name": "4. Transicion a en_proceso (repro bug DF-11)",
       "event": [
         {
           "listen": "test",
@@ -112,10 +147,85 @@
             "exec": [
               "pm.test('DF-11 corregido: 200 esperado, no 403', () => pm.response.code === 200);",
               "if (pm.response.code === 403) { console.warn('Reproducido: 403 Forbidden en el ultimo dia de asignacion temporal (DF-11).'); }"
-            ]
+            ],
+            "type": "text/javascript"
           }
         }
-      ]
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{temp_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"estado\": \"en_proceso\",\n  \"comentario\": \"Repro DF-11: intento el ultimo dia de la asignacion temporal\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/acciones/{{accion_id}}/transition/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "acciones",
+            "{{accion_id}}",
+            "transition",
+            ""
+          ]
+        },
+        "description": "Esperado: 200 OK (el responsable temporal sigue vigente el dia 'hasta'). Con el bug: 403 Forbidden."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://demo.localhost:8000"
+    },
+    {
+      "key": "admin_email",
+      "value": ""
+    },
+    {
+      "key": "admin_password",
+      "value": ""
+    },
+    {
+      "key": "temp_user_email",
+      "value": ""
+    },
+    {
+      "key": "temp_user_password",
+      "value": ""
+    },
+    {
+      "key": "admin_token",
+      "value": ""
+    },
+    {
+      "key": "temp_token",
+      "value": ""
+    },
+    {
+      "key": "accion_id",
+      "value": ""
+    },
+    {
+      "key": "temp_user_id",
+      "value": ""
+    },
+    {
+      "key": "today",
+      "value": ""
     }
   ]
 }
