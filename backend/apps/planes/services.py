@@ -166,14 +166,14 @@ class FileStorageService:
     @staticmethod
     def upload(file, tenant_slug: str, accion_id: int, actividad_id: int, uploaded_by, actividad) -> Evidencia:
         if file.size > Evidencia.MAX_SIZE_BYTES:
-            raise ValidationError({'archivo': f'El archivo supera el límite de 50 MB.'})
+            raise ValidationError({'archivo': 'El archivo supera el límite de 50 MB.'})
 
         detected_ct = _detect_content_type_from_magic(file)
         declared_ct = getattr(file, 'content_type', None)
         content_type = detected_ct or declared_ct
 
         if content_type not in Evidencia.TIPOS_PERMITIDOS:
-            raise ValidationError({'archivo': f'Tipo de archivo no permitido. Tipos aceptados: PDF, JPG, PNG, MP4.'})
+            raise ValidationError({'archivo': 'Tipo de archivo no permitido. Tipos aceptados: PDF, JPG, PNG, MP4.'})
 
         unique_name = f"{uuid.uuid4()}_{file.name}"
         s3_path = f"{tenant_slug}/evidencias/{accion_id}/{actividad_id}/{unique_name}"

@@ -5,10 +5,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.users.permissions import IsAdminTenant, RequireRole
 
 from .filters import IssueFilter
-from .models import DiagramaIshikawa, Issue
+from .models import DiagramaIshikawa
 from .serializers import (
     IshikawaSerializer,
     IshikawaWriteSerializer,

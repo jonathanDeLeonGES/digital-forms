@@ -260,7 +260,7 @@ def test_evidencia_max_size_bytes():
 @pytest.mark.django_db(transaction=True)
 def test_evidencia_cascade_delete_with_actividad():
     """Al eliminar Actividad, sus Evidencias deben eliminarse en cascada."""
-    from apps.planes.models import Actividad, Evidencia
+    from apps.planes.models import Evidencia
 
     tenant = _register('pt8', 'PT Tenant 8', 'admin@pt8.com')
     admin = _get_user(tenant, 'admin@pt8.com')

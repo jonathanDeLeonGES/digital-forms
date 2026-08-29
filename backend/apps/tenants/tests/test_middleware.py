@@ -48,7 +48,7 @@ def test_active_trial_tenant_passes():
     mw, get_response = _middleware()
     request = factory.get("/tenant/resource/")
     request.tenant = _tenant(is_active=True)
-    response = mw(request)
+    mw(request)
     get_response.assert_called_once_with(request)
 
 

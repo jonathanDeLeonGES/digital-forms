@@ -2,7 +2,6 @@
 RED phase: verify django-tenants settings are correctly configured.
 These tests fail until settings/base.py exists with the required configuration.
 """
-import django
 from django.conf import settings
 
 

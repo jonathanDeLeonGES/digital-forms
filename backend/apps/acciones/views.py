@@ -8,7 +8,6 @@ from apps.users.models import CustomUser
 from apps.users.permissions import RequireRole
 
 from .filters import AccionFilter
-from .models import Accion
 from .serializers import (
     AccionDetailSerializer,
     AccionListSerializer,

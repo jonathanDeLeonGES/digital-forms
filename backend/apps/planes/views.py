@@ -5,7 +5,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
-from apps.users.permissions import IsAdminTenant, RequireRole
+from apps.users.permissions import RequireRole
 
 from .models import Actividad, Evidencia, PlanTrabajo
 from .serializers import (

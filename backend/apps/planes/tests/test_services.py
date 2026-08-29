@@ -2,7 +2,6 @@
 Integration tests for PlanService and FileStorageService (Tasks 5.1, 5.2).
 Tests run with real PostgreSQL schemas via django-tenants.
 """
-import io
 import pytest
 from django.db import connection
 

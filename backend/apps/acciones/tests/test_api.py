@@ -181,7 +181,7 @@ def test_transition_wrong_role_returns_403():
     tenant = _register('aapi7', 'AAPI7', 'admin@aapi7.com')
     admin = _get_user(tenant, 'admin@aapi7.com')
     resp = _make_user(tenant, 'r@aapi7.com', 'responsable')
-    sup = _make_user(tenant, 'sup@aapi7.com', 'supervisor')
+    _make_user(tenant, 'sup@aapi7.com', 'supervisor')
     issue = _make_issue(tenant, admin, estado='en_analisis')
     connection.set_tenant(tenant)
     accion = AccionService.create_accion(issue, 'correctiva', 'res', resp, '2026-12-31', admin)

@@ -7,7 +7,7 @@ from django.db import connection
 
 from apps.tenants.models import Plan
 from apps.tenants.services import TenantRegistrationService
-from apps.issues.models import Issue, CausaRaiz, SubCausa
+from apps.issues.models import Issue, SubCausa
 from apps.issues.services import IssueService
 from apps.issues.exceptions import InvalidTransitionError
 
