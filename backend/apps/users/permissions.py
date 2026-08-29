@@ -1,20 +1,20 @@
 from rest_framework.permissions import BasePermission
 
 
-class RequireRole(BasePermission):
+def RequireRole(*roles: str) -> type:
     """
-    Usage in Wave 2+:
-        permission_classes = [IsAuthenticated, RequireRole('admin', 'supervisor')]
+    Factory that returns a DRF permission class restricted to the given roles.
+    Usage: permission_classes = [IsAuthenticated, RequireRole('admin', 'supervisor')]
     """
-    def __init__(self, *roles: str):
-        self.roles = roles
-
-    def has_permission(self, request, view) -> bool:
-        return bool(
-            request.user
-            and request.user.is_authenticated
-            and request.user.role in self.roles
-        )
+    class _RequireRole(BasePermission):
+        def has_permission(self, request, view) -> bool:
+            return bool(
+                request.user
+                and request.user.is_authenticated
+                and request.user.role in roles
+            )
+    _RequireRole.__name__ = f"RequireRole({', '.join(roles)})"
+    return _RequireRole
 
 
 class IsAdminTenant(BasePermission):

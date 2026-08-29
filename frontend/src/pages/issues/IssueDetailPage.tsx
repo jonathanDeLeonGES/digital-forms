@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { issuesService, type IssueDetail, type CausaRaiz } from '../../services/issues'
 import { IssueStatusBadge } from '../../components/issues/IssueStatusBadge'
+import { useAuth } from '../../context/AuthContext'
 
 const TIPO_LABELS: Record<string, string> = {
   incidente: 'Incidente',
@@ -31,15 +32,6 @@ const ESTADO_LABELS: Record<string, string> = {
 }
 
 const ADMIN_ROLES = new Set(['admin', 'supervisor'])
-
-function getUserRole(): string {
-  try {
-    const user = JSON.parse(localStorage.getItem('user') ?? '{}')
-    return user.role ?? 'responsable'
-  } catch {
-    return 'responsable'
-  }
-}
 
 function getReportadoPorName(issue: IssueDetail): string {
   if (typeof issue.reportado_por === 'object' && issue.reportado_por !== null) {
@@ -94,8 +86,8 @@ export default function IssueDetailPage() {
   const [error, setError] = useState('')
   const [transitioning, setTransitioning] = useState(false)
 
-  const userRole = getUserRole()
-  const isAdminOrSupervisor = ADMIN_ROLES.has(userRole)
+  const { user } = useAuth()
+  const isAdminOrSupervisor = ADMIN_ROLES.has(user?.role ?? '')
 
   useEffect(() => {
     if (!id) return
