@@ -34,6 +34,7 @@ jobs:
       DB_PASSWORD: sgca_dev_password
       DB_HOST: localhost
       DB_PORT: 5432
+      TENANT_BASE_DOMAIN: localhost
     defaults:
       run:
         working-directory: backend
