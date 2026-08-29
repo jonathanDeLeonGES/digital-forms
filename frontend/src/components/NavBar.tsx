@@ -1,4 +1,4 @@
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -7,6 +7,11 @@ const ROLE_LABELS: Record<string, string> = {
   responsable: 'Responsable',
   verificador: 'Verificador',
 }
+
+const NAV_LINK_CLASS = ({ isActive }: { isActive: boolean }) =>
+  `text-sm font-medium transition-colors ${
+    isActive ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'
+  }`
 
 export default function NavBar() {
   const { user, logout } = useAuth()
@@ -20,9 +25,16 @@ export default function NavBar() {
   return (
     <nav className="bg-white border-b border-gray-200 px-4 py-3">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <Link to="/issues" className="text-lg font-bold text-blue-600">
-          SGCA
-        </Link>
+        <div className="flex items-center gap-6">
+          <Link to="/issues" className="text-lg font-bold text-blue-600">
+            SGCA
+          </Link>
+          <NavLink to="/issues" className={NAV_LINK_CLASS}>Issues</NavLink>
+          <NavLink to="/acciones" className={NAV_LINK_CLASS}>Acciones</NavLink>
+          {user?.role === 'admin' && (
+            <NavLink to="/admin/usuarios" className={NAV_LINK_CLASS}>Usuarios</NavLink>
+          )}
+        </div>
 
         <div className="flex items-center gap-4">
           {user && (

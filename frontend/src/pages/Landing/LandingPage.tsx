@@ -69,7 +69,7 @@ export default function LandingPage() {
                   className="flex-1 px-3 py-2 text-sm focus:outline-none"
                 />
                 <span className="px-3 py-2 bg-gray-50 text-gray-400 text-xs border-l border-gray-300 select-none whitespace-nowrap">
-                  .sgca.com
+                  .{window.location.hostname}
                 </span>
               </div>
               {error && <p className="text-xs text-red-600">{error}</p>}

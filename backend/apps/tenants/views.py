@@ -29,10 +29,12 @@ class TenantRegistrationView(APIView):
                 status=409,
             )
 
+        primary_domain = tenant.get_primary_domain()
         return Response(
             {
                 "id": tenant.id,
                 "subdominio": tenant.schema_name,
+                "domain": primary_domain.domain if primary_domain else f"{tenant.schema_name}.localhost",
                 "email_admin": d["email_admin"],
                 "trial_expires_at": tenant.subscription.fecha_fin,
                 "message": "Tenant registrado exitosamente. Ya puedes iniciar sesión.",

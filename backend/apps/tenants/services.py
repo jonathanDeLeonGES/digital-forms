@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 
+from django.conf import settings
 from django.db import IntegrityError, connection, transaction
 
 from apps.users.models import CustomUser
@@ -36,7 +37,7 @@ class TenantRegistrationService:
 
         try:
             domain = Domain(
-                domain=f"{subdominio}.sgca.com",
+                domain=f"{subdominio}.{settings.TENANT_BASE_DOMAIN}",
                 tenant=tenant,
                 is_primary=True,
             )

@@ -1,4 +1,4 @@
-const BASE = import.meta.env.TENANT_BASE_DOMAIN ?? 'sgca.com'
+const BASE = import.meta.env.VITE_TENANT_BASE_DOMAIN ?? 'localhost'
 
 export function getSubdomain(): string | null {
   const hostname = window.location.hostname
