@@ -99,7 +99,7 @@ def test_require_role_importable():
 
 def test_require_role_allows_matching_role():
     from apps.users.permissions import RequireRole
-    perm = RequireRole('admin', 'supervisor')
+    perm = RequireRole('admin', 'supervisor')()
     request = MagicMock()
     request.user.is_authenticated = True
     request.user.role = 'admin'
@@ -108,7 +108,7 @@ def test_require_role_allows_matching_role():
 
 def test_require_role_allows_second_matching_role():
     from apps.users.permissions import RequireRole
-    perm = RequireRole('admin', 'supervisor')
+    perm = RequireRole('admin', 'supervisor')()
     request = MagicMock()
     request.user.is_authenticated = True
     request.user.role = 'supervisor'
@@ -117,7 +117,7 @@ def test_require_role_allows_second_matching_role():
 
 def test_require_role_rejects_wrong_role():
     from apps.users.permissions import RequireRole
-    perm = RequireRole('admin')
+    perm = RequireRole('admin')()
     request = MagicMock()
     request.user.is_authenticated = True
     request.user.role = 'responsable'
@@ -126,7 +126,7 @@ def test_require_role_rejects_wrong_role():
 
 def test_require_role_rejects_anonymous():
     from apps.users.permissions import RequireRole
-    perm = RequireRole('admin')
+    perm = RequireRole('admin')()
     request = MagicMock()
     request.user.is_authenticated = False
     assert perm.has_permission(request, None) is False
