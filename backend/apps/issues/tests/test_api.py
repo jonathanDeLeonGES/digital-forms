@@ -2,6 +2,7 @@
 Tests de integración para endpoints de issues (Tarea 5.2).
 """
 import pytest
+from django.conf import settings
 from django.db import connection
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -43,7 +44,7 @@ def _make_user(tenant, email, role='responsable'):
 
 def _client(tenant, user=None):
     client = APIClient()
-    client.defaults['HTTP_HOST'] = f'{tenant.schema_name}.sgca.com'
+    client.defaults['HTTP_HOST'] = f'{tenant.schema_name}.{settings.TENANT_BASE_DOMAIN}'
     if user:
         connection.set_tenant(tenant)
         token = str(RefreshToken.for_user(user).access_token)

@@ -4,6 +4,8 @@ Before services.py exists, all tests fail with ImportError.
 After implementation, all pass via static analysis (Django not installed in shell).
 """
 from contextlib import contextmanager
+
+from django.conf import settings
 from datetime import date, timedelta
 from unittest.mock import MagicMock, patch
 
@@ -84,7 +86,7 @@ def test_register_creates_domain_with_correct_url(MockTenant, MockDomain, MockPl
     TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com", "pass1234")
 
     MockDomain.assert_called_once_with(
-        domain="acme.sgca.com",
+        domain=f"acme.{settings.TENANT_BASE_DOMAIN}",
         tenant=mock_tenant,
         is_primary=True,
     )

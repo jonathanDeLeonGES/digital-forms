@@ -4,6 +4,7 @@ and permission enforcement. All tests use transaction=True because they create
 real tenant schemas via TenantRegistrationService (DDL cannot be rolled back).
 """
 import pytest
+from django.conf import settings
 from django.db import connection
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -47,7 +48,7 @@ def _get_admin(tenant, email):
 def _client_for_tenant(tenant, user=None, domain=None):
     """APIClient configured to hit the tenant's domain with optional auth."""
     if domain is None:
-        domain = f'{tenant.schema_name}.sgca.com'
+        domain = f'{tenant.schema_name}.{settings.TENANT_BASE_DOMAIN}'
     client = APIClient()
     client.defaults['HTTP_HOST'] = domain
     if user is not None:
@@ -407,7 +408,7 @@ def test_require_role_supervisor_allows_supervisor_rejects_admin():
     from unittest.mock import MagicMock
     from apps.users.permissions import RequireRole
 
-    perm = RequireRole('supervisor')
+    perm = RequireRole('supervisor')()
 
     req_supervisor = MagicMock()
     req_supervisor.user.is_authenticated = True

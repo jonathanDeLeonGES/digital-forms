@@ -17,6 +17,7 @@ REQUIRES_DB (marked per function): schema creation via django-tenants needs real
 from datetime import date
 
 import pytest
+from django.conf import settings
 from django.test import TestCase
 from rest_framework.test import APIRequestFactory
 
@@ -167,7 +168,7 @@ def test_successful_registration_creates_tenant_domain_subscription():
 
     # Domain exists with the expected hostname
     assert Domain.objects.filter(
-        domain="emp-integ.sgca.com",
+        domain=f"emp-integ.{settings.TENANT_BASE_DOMAIN}",
         tenant=db_tenant,
         is_primary=True,
     ).exists()
@@ -211,7 +212,7 @@ def test_duplicate_subdomain_raises_409_and_leaves_no_orphans():
     )
 
     tenant_count_before = Tenant.objects.filter(schema_name="dup-sub").count()
-    domain_count_before = Domain.objects.filter(domain="dup-sub.sgca.com").count()
+    domain_count_before = Domain.objects.filter(domain=f"dup-sub.{settings.TENANT_BASE_DOMAIN}").count()
     assert tenant_count_before == 1
     assert domain_count_before == 1
 
@@ -227,7 +228,7 @@ def test_duplicate_subdomain_raises_409_and_leaves_no_orphans():
 
     # Counts must not have changed — no orphan tenant or domain
     assert Tenant.objects.filter(schema_name="dup-sub").count() == tenant_count_before
-    assert Domain.objects.filter(domain="dup-sub.sgca.com").count() == domain_count_before
+    assert Domain.objects.filter(domain=f"dup-sub.{settings.TENANT_BASE_DOMAIN}").count() == domain_count_before
     # The failed attempt must not have created a Subscription
     assert Subscription.objects.filter(
         tenant__schema_name="dup-sub"
