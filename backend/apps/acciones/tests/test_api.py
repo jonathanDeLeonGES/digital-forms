@@ -1,4 +1,6 @@
 """Tests de integración de API para acciones (Task 7.2 & 7.3)."""
+from datetime import date, timedelta
+
 import pytest
 from django.db import connection
 from rest_framework.test import APIClient
@@ -156,6 +158,55 @@ def test_transition_valid_updates_state():
     )
     assert r.status_code == 200
     assert r.data['estado'] == 'en_proceso'
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    ('schema', 'end_date_offset', 'expected_status'),
+    [
+        ('aapi5tmplast', 0, 200),
+        ('aapi5tmpexp', -1, 403),
+    ],
+)
+def test_temporary_responsible_transition_respects_inclusive_end_date(
+    schema, end_date_offset, expected_status
+):
+    tenant = _register(schema, schema.upper(), f'admin@{schema}.com')
+    admin = _get_user(tenant, f'admin@{schema}.com')
+    assigned = _make_user(tenant, f'assigned@{schema}.com', 'responsable')
+    temporary = _make_user(tenant, f'temporary@{schema}.com', 'responsable')
+    issue = _make_issue(tenant, admin, estado='en_analisis')
+    connection.set_tenant(tenant)
+    accion = AccionService.create_accion(
+        issue, 'correctiva', 'res', assigned, '2026-12-31', admin
+    )
+
+    admin_client = _client(tenant, admin)
+    assignment = admin_client.post(
+        f'/api/acciones/{accion.id}/responsable-temporal/',
+        {
+            'responsable_temporal_id': temporary.id,
+            'responsable_temporal_hasta': (
+                date.today() + timedelta(days=end_date_offset)
+            ).isoformat(),
+        },
+        format='json',
+    )
+    assert assignment.status_code == 200
+
+    temporary_client = _client(tenant, temporary)
+    response = temporary_client.post(
+        f'/api/acciones/{accion.id}/transition/',
+        {
+            'estado': 'en_proceso',
+            'comentario': 'Inicio en el último día de la asignación temporal',
+        },
+        format='json',
+    )
+
+    assert response.status_code == expected_status, response.data
+    if expected_status == 200:
+        assert response.data['estado'] == 'en_proceso'
 
 
 @pytest.mark.django_db(transaction=True)

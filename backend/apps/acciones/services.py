@@ -132,7 +132,7 @@ class AccionService:
                 accion.responsable_temporal_id is not None
                 and accion.responsable_temporal_id == requesting_user.pk
                 and accion.responsable_temporal_hasta is not None
-                and accion.responsable_temporal_hasta > date_class.today()
+                and accion.responsable_temporal_hasta >= date_class.today()
             )
             if not (es_responsable or es_responsable_temporal):
                 raise PermissionDenied(
