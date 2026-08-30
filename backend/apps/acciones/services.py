@@ -114,36 +114,34 @@ class AccionService:
         if nuevo_estado not in validos:
             raise InvalidTransitionError(accion.estado, nuevo_estado)
 
+        if requesting_user.role != 'admin':
+            key = (accion.estado, nuevo_estado)
+            rol_requerido = Accion.ROLES_TRANSICION.get(key)
+
+            if rol_requerido == 'responsable_asignado':
+                from datetime import date as date_class
+                es_responsable = accion.responsable_id == requesting_user.pk
+                es_responsable_temporal = (
+                    accion.responsable_temporal_id is not None
+                    and accion.responsable_temporal_id == requesting_user.pk
+                    and accion.responsable_temporal_hasta is not None
+                    and accion.responsable_temporal_hasta >= date_class.today()
+                )
+                if not (es_responsable or es_responsable_temporal):
+                    raise PermissionDenied(
+                        'Solo el responsable asignado, responsable temporal activo o admin pueden iniciar esta acción.'
+                    )
+            elif rol_requerido == 'supervisor':
+                if requesting_user.role != 'supervisor':
+                    raise PermissionDenied('Solo el supervisor puede cerrar una acción.')
+            elif rol_requerido == 'verificador':
+                if requesting_user.role != 'verificador':
+                    raise PermissionDenied('Solo el verificador puede verificar una acción.')
+
         if accion.estado == 'en_proceso' and nuevo_estado == 'cerrado':
             from apps.planes.services import PlanService
             if not PlanService.is_plan_complete(accion.pk):
                 raise ValidationError({'detail': 'El plan de trabajo no está completo. Todas las actividades deben estar completadas antes de cerrar la acción.'})
-
-        if requesting_user.role == 'admin':
-            return
-
-        key = (accion.estado, nuevo_estado)
-        rol_requerido = Accion.ROLES_TRANSICION.get(key)
-
-        if rol_requerido == 'responsable_asignado':
-            from datetime import date as date_class
-            es_responsable = accion.responsable_id == requesting_user.pk
-            es_responsable_temporal = (
-                accion.responsable_temporal_id is not None
-                and accion.responsable_temporal_id == requesting_user.pk
-                and accion.responsable_temporal_hasta is not None
-                and accion.responsable_temporal_hasta >= date_class.today()
-            )
-            if not (es_responsable or es_responsable_temporal):
-                raise PermissionDenied(
-                    'Solo el responsable asignado, responsable temporal activo o admin pueden iniciar esta acción.'
-                )
-        elif rol_requerido == 'supervisor':
-            if requesting_user.role != 'supervisor':
-                raise PermissionDenied('Solo el supervisor puede cerrar una acción.')
-        elif rol_requerido == 'verificador':
-            if requesting_user.role != 'verificador':
-                raise PermissionDenied('Solo el verificador puede verificar una acción.')
 
     @staticmethod
     def _trigger_issue_transition_if_needed(issue, created_by) -> None:
