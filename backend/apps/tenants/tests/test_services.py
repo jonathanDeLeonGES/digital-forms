@@ -8,6 +8,7 @@ from datetime import date, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
+from django.conf import settings
 
 from apps.tenants.exceptions import SubdomainAlreadyExistsError
 from apps.tenants.services import TenantRegistrationService
@@ -84,7 +85,7 @@ def test_register_creates_domain_with_correct_url(MockTenant, MockDomain, MockPl
     TenantRegistrationService.register("ACME Corp", "acme", "admin@acme.com", "pass1234")
 
     MockDomain.assert_called_once_with(
-        domain="acme.sgca.com",
+        domain=f"acme.{settings.TENANT_BASE_DOMAIN}",
         tenant=mock_tenant,
         is_primary=True,
     )
