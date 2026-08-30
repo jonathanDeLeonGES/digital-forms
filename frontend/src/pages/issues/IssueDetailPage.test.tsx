@@ -11,6 +11,18 @@ vi.mock('../../services/issues', () => ({
   },
 }))
 
+// IssueDetailPage obtiene el rol vía useAuth(); se simula el contexto de
+// autenticación con el rol que cada test configura en renderPage().
+let mockRole = 'admin'
+vi.mock('../../context/AuthContext', () => ({
+  useAuth: () => ({
+    user: { id: 1, email: 'test@test.com', role: mockRole, tenant: 'test' },
+    isAuthenticated: true,
+    login: vi.fn(),
+    logout: vi.fn(),
+  }),
+}))
+
 import { issuesService } from '../../services/issues'
 
 const mockGetIssue = issuesService.getIssue as ReturnType<typeof vi.fn>
@@ -36,7 +48,7 @@ function makeDetail(overrides = {}) {
 }
 
 function renderPage(id = 1, userRole = 'admin') {
-  localStorage.setItem('user', JSON.stringify({ id: 1, role: userRole }))
+  mockRole = userRole
   return render(
     <MemoryRouter initialEntries={[`/issues/${id}`]}>
       <Routes>
