@@ -4,6 +4,12 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import IssueDetailPage from './IssueDetailPage'
 
+const { mockUseAuth } = vi.hoisted(() => ({ mockUseAuth: vi.fn() }))
+
+vi.mock('../../context/AuthContext', () => ({
+  useAuth: mockUseAuth,
+}))
+
 vi.mock('../../services/issues', () => ({
   issuesService: {
     getIssue: vi.fn(),
@@ -36,7 +42,7 @@ function makeDetail(overrides = {}) {
 }
 
 function renderPage(id = 1, userRole = 'admin') {
-  localStorage.setItem('user', JSON.stringify({ id: 1, role: userRole }))
+  mockUseAuth.mockReturnValue({ user: { id: 1, role: userRole } })
   return render(
     <MemoryRouter initialEntries={[`/issues/${id}`]}>
       <Routes>
@@ -48,7 +54,6 @@ function renderPage(id = 1, userRole = 'admin') {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  localStorage.clear()
 })
 
 describe('IssueDetailPage — carga de datos', () => {

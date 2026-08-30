@@ -104,6 +104,7 @@ describe('RegisterPage — respuestas del servidor', () => {
       json: async () => ({
         id: 1,
         subdominio: 'acme',
+        domain: 'acme.sgca.com',
         trial_expires_at: '2026-05-22T00:00:00Z',
         message: 'Tenant registrado con éxito.',
       }),
@@ -122,7 +123,7 @@ describe('RegisterPage — respuestas del servidor', () => {
   it('envía password en el body del request', async () => {
     mockFetch.mockResolvedValueOnce({
       status: 201,
-      json: async () => ({ id: 1, subdominio: 'acme', trial_expires_at: '2026-05-22T00:00:00Z', message: '' }),
+      json: async () => ({ id: 1, subdominio: 'acme', domain: 'acme.sgca.com', trial_expires_at: '2026-05-22T00:00:00Z', message: '' }),
     })
 
     renderPage()
@@ -197,7 +198,7 @@ describe('RegisterPage — respuestas del servidor', () => {
 
     resolveResponse({
       status: 201,
-      json: async () => ({ id: 1, subdominio: 'acme', trial_expires_at: '2026-05-22T00:00:00Z', message: '' }),
+      json: async () => ({ id: 1, subdominio: 'acme', domain: 'acme.sgca.com', trial_expires_at: '2026-05-22T00:00:00Z', message: '' }),
     })
   })
 })
