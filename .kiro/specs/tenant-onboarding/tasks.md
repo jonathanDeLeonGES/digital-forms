@@ -1,6 +1,6 @@
 # Implementation Plan — tenant-onboarding
 
-- [ ] 1. Configuración de django-tenants en el proyecto
+- [x] 1. Configuración de django-tenants en el proyecto
 - [x] 1.1 Configurar settings para schema-per-tenant
   - Agregar `django-tenants` a INSTALLED_APPS y configurar `SHARED_APPS` y `TENANT_APPS` según la separación de modelos (tenants app en SHARED_APPS; apps de negocio vacías por ahora en TENANT_APPS)
   - Configurar `DATABASE_ROUTERS = ['django_tenants.routers.TenantSyncRouter']`
@@ -16,7 +16,7 @@
   - El servidor Django arranca sin errores y el Admin es accesible en el dominio público
   - _Requirements: 4.1, 6.3_
 
-- [ ] 2. Modelos del schema público
+- [x] 2. Modelos del schema público
 - [x] 2.1 Implementar modelos Tenant y Domain
   - Crear modelo `Tenant` heredando de `TenantMixin` con campos `nombre_empresa` (str, max 200), `email_admin` (EmailField), `created_at`; establecer `auto_create_schema = True` y `auto_drop_schema = True`
   - Crear modelo `Domain` heredando de `DomainMixin`
@@ -37,7 +37,7 @@
   - `python manage.py migrate_schemas --shared` completa sin errores y `Plan.objects.count() == 2` tras cargar el fixture
   - _Requirements: 3.1_
 
-- [ ] 3. Servicio y API de registro de tenant (P)
+- [x] 3. Servicio y API de registro de tenant (P)
   - _Boundary: TenantRegistrationService, TenantRegistrationView, TenantRegistrationSerializer_
 
 - [x] 3.1 Implementar TenantRegistrationService
