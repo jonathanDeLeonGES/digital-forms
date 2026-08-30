@@ -19,8 +19,10 @@ beforeEach(() => {
   mockFetch.mockReset()
 })
 
+type FormField = 'nombre_empresa' | 'subdominio' | 'email_admin' | 'password'
+
 /** Fills all required fields except those in `skip`. */
-async function fillForm(skip: Array<keyof typeof fields> = []) {
+async function fillForm(skip: FormField[] = []) {
   const fields = {
     nombre_empresa: { label: /nombre de empresa/i, value: 'ACME S.A.' },
     subdominio:     { label: /subdominio/i,         value: 'acme' },
@@ -28,7 +30,7 @@ async function fillForm(skip: Array<keyof typeof fields> = []) {
     password:       { label: /contraseña/i,         value: 'Admin123!' },
   }
   for (const [key, { label, value }] of Object.entries(fields)) {
-    if (!skip.includes(key as keyof typeof fields)) {
+    if (!skip.includes(key as FormField)) {
       await userEvent.type(screen.getByLabelText(label), value)
     }
   }
