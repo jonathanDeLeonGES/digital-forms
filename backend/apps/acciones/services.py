@@ -1,5 +1,6 @@
 from datetime import date
 
+from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from .exceptions import InvalidTransitionError
@@ -114,11 +115,18 @@ class AccionService:
         if nuevo_estado not in validos:
             raise InvalidTransitionError(accion.estado, nuevo_estado)
 
+        AccionService._validate_transition_authorization(accion, nuevo_estado, requesting_user)
+
+        # Validación de negocio después de la autorización: aplica a todos los
+        # roles (incluido admin). Un usuario sin permiso recibe 403 sin
+        # exponer el estado del plan de trabajo.
         if accion.estado == 'en_proceso' and nuevo_estado == 'cerrado':
             from apps.planes.services import PlanService
             if not PlanService.is_plan_complete(accion.pk):
                 raise ValidationError({'detail': 'El plan de trabajo no está completo. Todas las actividades deben estar completadas antes de cerrar la acción.'})
 
+    @staticmethod
+    def _validate_transition_authorization(accion: Accion, nuevo_estado: str, requesting_user) -> None:
         if requesting_user.role == 'admin':
             return
 
@@ -126,13 +134,17 @@ class AccionService:
         rol_requerido = Accion.ROLES_TRANSICION.get(key)
 
         if rol_requerido == 'responsable_asignado':
-            from datetime import date as date_class
             es_responsable = accion.responsable_id == requesting_user.pk
+            # DF-58: la fecha 'hasta' es inclusiva — el responsable temporal
+            # sigue siendo válido durante todo ese día. Se usa
+            # timezone.localdate() (TIME_ZONE del proyecto) en lugar de
+            # date.today() (zona horaria del SO, UTC en contenedores) para no
+            # expirar la asignación horas antes del fin del día local.
             es_responsable_temporal = (
                 accion.responsable_temporal_id is not None
                 and accion.responsable_temporal_id == requesting_user.pk
                 and accion.responsable_temporal_hasta is not None
-                and accion.responsable_temporal_hasta > date_class.today()
+                and accion.responsable_temporal_hasta >= timezone.localdate()
             )
             if not (es_responsable or es_responsable_temporal):
                 raise PermissionDenied(

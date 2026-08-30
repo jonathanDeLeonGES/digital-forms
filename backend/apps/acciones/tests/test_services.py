@@ -67,6 +67,26 @@ def _make_accion(tenant, issue, responsable, created_by):
     )
 
 
+def _completar_plan(accion, responsable, admin):
+    """Crea un plan de trabajo con una actividad completada.
+
+    Desde la Wave 3 (planes de trabajo) cerrar una acción exige que su plan
+    esté completo, por lo que los tests que cierran acciones deben preparar
+    un plan completado.
+    """
+    from apps.planes.services import PlanService
+    plan = PlanService.create_plan(
+        accion,
+        [{'descripcion': 'Actividad de prueba', 'responsable': responsable,
+          'fecha_limite': '2027-12-31'}],
+        admin,
+    )
+    for act in plan.actividades.all():
+        PlanService.transition_actividad(act, 'completada', admin)
+    return plan
+
+
+
 # ---------------------------------------------------------------------------
 # Task 7.1 — Unit tests del servicio
 # ---------------------------------------------------------------------------
@@ -205,6 +225,7 @@ def test_validate_transition_supervisor_can_close():
     accion = _make_accion(tenant, issue, resp, admin)
     connection.set_tenant(tenant)
     AccionService.transition_state(accion, 'en_proceso', resp)
+    _completar_plan(accion, resp, admin)
     AccionService.transition_state(accion, 'cerrado', sup)
     assert accion.estado == 'cerrado'
 
@@ -221,6 +242,7 @@ def test_validate_transition_verificador_can_verify():
     accion = _make_accion(tenant, issue, resp, admin)
     connection.set_tenant(tenant)
     AccionService.transition_state(accion, 'en_proceso', resp)
+    _completar_plan(accion, resp, admin)
     AccionService.transition_state(accion, 'cerrado', sup)
     AccionService.transition_state(accion, 'verificado', ver)
     assert accion.estado == 'verificado'
@@ -352,6 +374,7 @@ def test_update_accion_verificada_raises():
     accion = _make_accion(tenant, issue, resp, admin)
     connection.set_tenant(tenant)
     AccionService.transition_state(accion, 'en_proceso', resp)
+    _completar_plan(accion, resp, admin)
     AccionService.transition_state(accion, 'cerrado', sup)
     AccionService.transition_state(accion, 'verificado', ver)
     connection.set_tenant(tenant)
@@ -371,3 +394,87 @@ def test_update_accion_non_admin_raises():
     connection.set_tenant(tenant)
     with pytest.raises(PermissionDenied):
         AccionService.update_accion(accion, {'resultado_esperado': 'nuevo'}, resp)
+
+
+# ---------------------------------------------------------------------------
+# DF-58 — Regresión: límite inclusivo de la asignación temporal
+# ---------------------------------------------------------------------------
+
+def _make_accion_con_temporal(schema, hasta):
+    """Crea tenant, acción y asigna responsable temporal con la fecha dada."""
+    tenant = _register(schema, schema.upper(), f'admin@{schema}.com')
+    admin = _get_user(tenant, f'admin@{schema}.com')
+    titular = _make_user(tenant, f'titular@{schema}.com', 'responsable')
+    temporal = _make_user(tenant, f'temporal@{schema}.com', 'responsable')
+    issue = _make_issue(tenant, admin, estado='en_analisis')
+    connection.set_tenant(tenant)
+    accion = _make_accion(tenant, issue, titular, admin)
+    connection.set_tenant(tenant)
+    AccionService.assign_responsable_temporal(accion, temporal, hasta, admin)
+    connection.set_tenant(tenant)
+    return tenant, accion, temporal
+
+
+@pytest.mark.django_db(transaction=True)
+def test_df58_temporal_puede_iniciar_el_ultimo_dia():
+    """DF-58: hasta == hoy (fecha local de negocio) debe permitir iniciar."""
+    from django.utils import timezone
+    hoy = timezone.localdate()
+    tenant, accion, temporal = _make_accion_con_temporal('df58sa', hoy)
+    AccionService.transition_state(accion, 'en_proceso', temporal)
+    assert accion.estado == 'en_proceso'
+
+
+@pytest.mark.django_db(transaction=True)
+def test_df58_temporal_puede_iniciar_con_hasta_futuro():
+    from datetime import timedelta
+    from django.utils import timezone
+    hasta = timezone.localdate() + timedelta(days=3)
+    tenant, accion, temporal = _make_accion_con_temporal('df58sb', hasta)
+    AccionService.transition_state(accion, 'en_proceso', temporal)
+    assert accion.estado == 'en_proceso'
+
+
+@pytest.mark.django_db(transaction=True)
+def test_df58_temporal_expirado_ayer_no_puede_iniciar():
+    from datetime import timedelta
+    from django.utils import timezone
+    from rest_framework.exceptions import PermissionDenied
+    hasta = timezone.localdate() - timedelta(days=1)
+    tenant, accion, temporal = _make_accion_con_temporal('df58sc', hasta)
+    with pytest.raises(PermissionDenied):
+        AccionService.transition_state(accion, 'en_proceso', temporal)
+    assert accion.estado == 'abierto'
+
+
+@pytest.mark.django_db(transaction=True)
+def test_df58_ultimo_dia_valido_cruzando_medianoche_utc():
+    """La validez usa la fecha local de negocio (TIME_ZONE), no la fecha UTC.
+
+    A las 20:30 de Guatemala (02:30 UTC del día siguiente), una asignación con
+    hasta == fecha local de hoy debe seguir siendo válida, aunque en UTC ya
+    haya cambiado el día. Regresión del uso de date.today() (zona del SO).
+    """
+    from datetime import date, datetime, timezone as dt_timezone
+    from unittest import mock
+    from django.utils import timezone
+
+    # 2026-03-10 02:30 UTC == 2026-03-09 20:30 America/Guatemala (UTC-6)
+    instante_utc = datetime(2026, 3, 10, 2, 30, tzinfo=dt_timezone.utc)
+    hasta_local = date(2026, 3, 9)
+    tenant, accion, temporal = _make_accion_con_temporal('df58sd', hasta_local)
+    assert timezone.get_current_timezone_name() == 'America/Guatemala'
+    with mock.patch('django.utils.timezone.now', return_value=instante_utc):
+        assert timezone.localdate() == hasta_local
+        AccionService.transition_state(accion, 'en_proceso', temporal)
+    assert accion.estado == 'en_proceso'
+
+
+@pytest.mark.django_db(transaction=True)
+def test_df58_temporal_sin_hasta_no_puede_iniciar():
+    """Un temporal sin fecha 'hasta' definida no otorga permiso de inicio."""
+    from rest_framework.exceptions import PermissionDenied
+    tenant, accion, temporal = _make_accion_con_temporal('df58se', None)
+    with pytest.raises(PermissionDenied):
+        AccionService.transition_state(accion, 'en_proceso', temporal)
+    assert accion.estado == 'abierto'

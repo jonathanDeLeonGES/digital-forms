@@ -64,6 +64,25 @@ def _make_issue(tenant, user, estado='abierto'):
     return issue
 
 
+def _completar_plan(accion, responsable, admin):
+    """Crea un plan de trabajo con una actividad completada.
+
+    Desde la Wave 3 (planes de trabajo) cerrar una acción exige que su plan
+    esté completo, por lo que los tests que cierran acciones deben preparar
+    un plan completado.
+    """
+    from apps.planes.services import PlanService
+    plan = PlanService.create_plan(
+        accion,
+        [{'descripcion': 'Actividad de prueba', 'responsable': responsable,
+          'fecha_limite': '2027-12-31'}],
+        admin,
+    )
+    for act in plan.actividades.all():
+        PlanService.transition_actividad(act, 'completada', admin)
+    return plan
+
+
 def _accion_payload(issue_id, responsable_id, **overrides):
     base = {
         'issue_id': issue_id,
@@ -237,6 +256,7 @@ def test_update_verified_accion_returns_400():
     accion = AccionService.create_accion(issue, 'correctiva', 'res', resp, '2026-12-31', admin)
     connection.set_tenant(tenant)
     AccionService.transition_state(accion, 'en_proceso', resp)
+    _completar_plan(accion, resp, admin)
     AccionService.transition_state(accion, 'cerrado', sup)
     AccionService.transition_state(accion, 'verificado', ver)
     client = _client(tenant, admin)
@@ -321,6 +341,11 @@ def test_e2e_full_lifecycle():
     assert r.status_code == 200
     assert r.data['estado'] == 'en_proceso'
 
+    # El plan de trabajo debe estar completo antes de poder cerrar (Wave 3)
+    from apps.acciones.models import Accion
+    connection.set_tenant(tenant)
+    _completar_plan(Accion.objects.get(pk=accion_id), resp, admin)
+
     # Supervisor cierra
     client_sup = _client(tenant, sup)
     r = client_sup.post(
@@ -345,3 +370,80 @@ def test_e2e_full_lifecycle():
     r = client_admin.get(f'/api/acciones/{accion_id}/historial/')
     assert r.status_code == 200
     assert len(r.data) == 3
+
+
+# ---------------------------------------------------------------------------
+# DF-58 — Regresión API: transición el último día de la asignación temporal
+# ---------------------------------------------------------------------------
+
+@pytest.mark.django_db(transaction=True)
+def test_df58_transition_ultimo_dia_asignacion_temporal_returns_200():
+    """Repro del ticket DF-58 vía HTTP: hasta == hoy debe devolver 200, no 403."""
+    from django.utils import timezone
+
+    tenant = _register('df58aa', 'DF58AA', 'admin@df58aa.com')
+    admin = _get_user(tenant, 'admin@df58aa.com')
+    titular = _make_user(tenant, 'titular@df58aa.com', 'responsable')
+    temporal = _make_user(tenant, 'temporal@df58aa.com', 'responsable')
+    issue = _make_issue(tenant, admin, estado='en_analisis')
+    connection.set_tenant(tenant)
+    accion = AccionService.create_accion(
+        issue=issue, tipo='correctiva',
+        resultado_esperado='Iniciar accion el ultimo dia de la asignacion temporal',
+        responsable=titular, fecha_limite='2027-12-31', created_by=admin,
+    )
+
+    # El admin asigna al responsable temporal con hasta = hoy (último día válido)
+    admin_client = _client(tenant, admin)
+    r = admin_client.post(
+        f'/api/acciones/{accion.pk}/responsable-temporal/',
+        {
+            'responsable_temporal_id': temporal.pk,
+            'responsable_temporal_hasta': str(timezone.localdate()),
+        },
+        format='json',
+    )
+    assert r.status_code == 200, r.content
+
+    # El responsable temporal inicia la acción ese mismo día
+    temp_client = _client(tenant, temporal)
+    r = temp_client.post(
+        f'/api/acciones/{accion.pk}/transition/',
+        {'estado': 'en_proceso', 'comentario': 'Inicio en el último día de asignación (DF-58)'},
+        format='json',
+    )
+    assert r.status_code == 200, r.content
+    assert r.json()['estado'] == 'en_proceso'
+
+
+@pytest.mark.django_db(transaction=True)
+def test_df58_transition_asignacion_temporal_expirada_returns_403():
+    """Contraparte: con hasta == ayer la transición debe seguir prohibida."""
+    from datetime import timedelta
+    from django.utils import timezone
+
+    tenant = _register('df58ab', 'DF58AB', 'admin@df58ab.com')
+    admin = _get_user(tenant, 'admin@df58ab.com')
+    titular = _make_user(tenant, 'titular@df58ab.com', 'responsable')
+    temporal = _make_user(tenant, 'temporal@df58ab.com', 'responsable')
+    issue = _make_issue(tenant, admin, estado='en_analisis')
+    connection.set_tenant(tenant)
+    accion = AccionService.create_accion(
+        issue=issue, tipo='correctiva',
+        resultado_esperado='No debe iniciarse con asignacion temporal vencida',
+        responsable=titular, fecha_limite='2027-12-31', created_by=admin,
+    )
+    AccionService.assign_responsable_temporal(
+        accion, temporal, timezone.localdate() - timedelta(days=1), admin
+    )
+
+    temp_client = _client(tenant, temporal)
+    r = temp_client.post(
+        f'/api/acciones/{accion.pk}/transition/',
+        {'estado': 'en_proceso', 'comentario': 'Intento con asignación vencida'},
+        format='json',
+    )
+    assert r.status_code == 403, r.content
+    connection.set_tenant(tenant)
+    accion.refresh_from_db()
+    assert accion.estado == 'abierto'
