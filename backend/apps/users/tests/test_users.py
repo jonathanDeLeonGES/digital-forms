@@ -407,7 +407,7 @@ def test_require_role_supervisor_allows_supervisor_rejects_admin():
     from unittest.mock import MagicMock
     from apps.users.permissions import RequireRole
 
-    perm = RequireRole('supervisor')
+    perm = RequireRole('supervisor')()
 
     req_supervisor = MagicMock()
     req_supervisor.user.is_authenticated = True
