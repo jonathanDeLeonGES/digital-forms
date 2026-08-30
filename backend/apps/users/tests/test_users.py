@@ -64,7 +64,7 @@ def _client_for_tenant(tenant, user=None, domain=None):
 @pytest.mark.django_db(transaction=True)
 def test_login_correct_credentials_returns_200():
     tenant = _register_tenant('jwtlogin', 'JWT Login Co', 'admin@jwtlogin.com')
-    user = _create_user(tenant, 'user@jwtlogin.com', password='secret123!')
+    _create_user(tenant, 'user@jwtlogin.com', password='secret123!')
 
     client = _client_for_tenant(tenant)
     resp = client.post('/api/auth/login/', {'email': 'user@jwtlogin.com', 'password': 'secret123!'}, format='json')
@@ -270,7 +270,7 @@ def test_trial_plan_has_no_license_limit():
 
     # Trial plan with num_licencias=1 should NOT block creation
     connection.set_schema_to_public()
-    trial = Plan.objects.get(nombre=Plan.TRIAL)
+    Plan.objects.get(nombre=Plan.TRIAL)
     sub = Subscription.objects.get(tenant=tenant)
     sub.num_licencias = 1
     sub.save()

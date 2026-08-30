@@ -17,6 +17,7 @@ interface FormErrors {
 
 interface SuccessState {
   subdominio: string
+  domain: string
   trial_expires_at: string
 }
 
@@ -112,7 +113,7 @@ export default function RegisterPage() {
 
       if (response.status === 201) {
         const data = await response.json()
-        setSuccess({ subdominio: data.subdominio, trial_expires_at: data.trial_expires_at })
+        setSuccess({ subdominio: data.subdominio, domain: data.domain, trial_expires_at: data.trial_expires_at })
       } else if (response.status === 400) {
         const data = await response.json()
         setErrors(data as FormErrors)
@@ -148,7 +149,7 @@ export default function RegisterPage() {
           </p>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <p className="text-sm text-blue-700 font-medium mb-1">URL de acceso de su empresa:</p>
-            <p className="text-lg font-bold text-blue-900">{success.subdominio}.sgca.com</p>
+            <p className="text-lg font-bold text-blue-900">{success.domain}</p>
           </div>
           <p className="text-sm text-gray-500">
             Comparta esta URL con los usuarios de su empresa para que puedan acceder al sistema.

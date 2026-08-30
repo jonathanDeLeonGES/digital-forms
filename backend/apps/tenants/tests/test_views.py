@@ -5,7 +5,6 @@ Static analysis only — Django and DRF are not installed in the dev shell.
 from datetime import date
 from unittest.mock import MagicMock, patch
 
-import pytest
 from rest_framework.test import APIRequestFactory
 
 from apps.tenants.exceptions import SubdomainAlreadyExistsError

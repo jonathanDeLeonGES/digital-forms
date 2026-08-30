@@ -10,6 +10,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'dev-secret-key-change-in-production')
 
+TENANT_BASE_DOMAIN = os.environ.get('TENANT_BASE_DOMAIN', 'sgca.com')
+
 DEBUG = False
 
 ALLOWED_HOSTS = []
@@ -39,6 +41,8 @@ TENANT_APPS = [
     'apps.users',
     'rest_framework_simplejwt.token_blacklist',
     'apps.issues',
+    'apps.acciones',
+    'apps.planes',
 ]
 
 # django-tenants recomienda deduplicar: las apps en SHARED_APPS no se repiten.
@@ -155,3 +159,14 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ---------------------------------------------------------------------------
+# Storage — S3 / MinIO (django-storages + boto3)
+# ---------------------------------------------------------------------------
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', 'minioadmin')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', 'minioadmin')
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'sgca-evidencias')
+AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'us-east-1')
+AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', '')
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = None

@@ -5,7 +5,7 @@ After implementation, all pass via static analysis (Django not installed in shel
 """
 from contextlib import contextmanager
 from datetime import date, timedelta
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 

@@ -81,7 +81,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS(f"Domain '{domain_name}' marked as primary."))
 
         self.stdout.write(
-            f"\nPublic tenant domains:\n"
+            "\nPublic tenant domains:\n"
             + "\n".join(
                 f"  {'*' if d.is_primary else ' '} {d.domain}"
                 for d in Domain.objects.filter(tenant=tenant).order_by("-is_primary", "domain")

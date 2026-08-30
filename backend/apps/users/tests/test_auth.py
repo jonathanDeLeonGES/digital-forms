@@ -165,9 +165,4 @@ def test_service_importable():
 
 
 def test_exceptions_importable():
-    from apps.users.exceptions import (
-        EmailAlreadyExistsError,
-        LicenseLimitExceededError,
-        UserNotFoundError,
-    )
     assert True

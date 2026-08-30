@@ -3,15 +3,13 @@ Unit tests for TenantAdmin and SubscriptionAdmin (tasks 5.1 and 5.2).
 Static analysis only — mocks replace ORM calls, no DB required.
 """
 from datetime import date, timedelta
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
-import pytest
 
 from apps.tenants.admin import (
     ChangeToEnterpriseForm,
     ExtendTrialForm,
     TenantAdmin,
-    SubscriptionAdmin,
     UpdateLicenseCountForm,
 )
 

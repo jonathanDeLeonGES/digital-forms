@@ -20,7 +20,6 @@ def test_public_schema_urlconf_points_to_public_urls():
 
 def test_urls_public_has_admin_route():
     from config import urls_public
-    url_names = [getattr(p, 'pattern', None) for p in urls_public.urlpatterns]
     # Check that at least one pattern corresponds to 'admin/'
     patterns_str = [str(p.pattern) for p in urls_public.urlpatterns]
     assert any('admin' in p for p in patterns_str), (
