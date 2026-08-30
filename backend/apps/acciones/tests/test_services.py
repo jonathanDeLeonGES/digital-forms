@@ -5,6 +5,7 @@ from django.db import connection
 from apps.tenants.models import Plan
 from apps.tenants.services import TenantRegistrationService
 from apps.issues.services import IssueService
+from apps.planes.models import Actividad, PlanTrabajo
 from apps.acciones.models import Accion
 from apps.acciones.services import AccionService
 from apps.acciones.exceptions import InvalidTransitionError
@@ -64,6 +65,18 @@ def _make_accion(tenant, issue, responsable, created_by):
         responsable=responsable,
         fecha_limite='2026-12-31',
         created_by=created_by,
+    )
+
+
+def _complete_plan(tenant, accion, responsable):
+    connection.set_tenant(tenant)
+    plan = PlanTrabajo.objects.create(accion=accion)
+    Actividad.objects.create(
+        plan=plan,
+        descripcion='Actividad completada para prueba',
+        responsable=responsable,
+        fecha_limite='2026-12-31',
+        estado='completada',
     )
 
 
@@ -205,6 +218,7 @@ def test_validate_transition_supervisor_can_close():
     accion = _make_accion(tenant, issue, resp, admin)
     connection.set_tenant(tenant)
     AccionService.transition_state(accion, 'en_proceso', resp)
+    _complete_plan(tenant, accion, resp)
     AccionService.transition_state(accion, 'cerrado', sup)
     assert accion.estado == 'cerrado'
 
@@ -221,6 +235,7 @@ def test_validate_transition_verificador_can_verify():
     accion = _make_accion(tenant, issue, resp, admin)
     connection.set_tenant(tenant)
     AccionService.transition_state(accion, 'en_proceso', resp)
+    _complete_plan(tenant, accion, resp)
     AccionService.transition_state(accion, 'cerrado', sup)
     AccionService.transition_state(accion, 'verificado', ver)
     assert accion.estado == 'verificado'
@@ -352,6 +367,7 @@ def test_update_accion_verificada_raises():
     accion = _make_accion(tenant, issue, resp, admin)
     connection.set_tenant(tenant)
     AccionService.transition_state(accion, 'en_proceso', resp)
+    _complete_plan(tenant, accion, resp)
     AccionService.transition_state(accion, 'cerrado', sup)
     AccionService.transition_state(accion, 'verificado', ver)
     connection.set_tenant(tenant)

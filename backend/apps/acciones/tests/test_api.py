@@ -9,6 +9,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.tenants.models import Plan
 from apps.tenants.services import TenantRegistrationService
 from apps.issues.services import IssueService
+from apps.planes.models import Actividad, PlanTrabajo
+from apps.acciones.models import Accion
 from apps.acciones.services import AccionService
 
 
@@ -76,6 +78,18 @@ def _accion_payload(issue_id, responsable_id, **overrides):
     }
     base.update(overrides)
     return base
+
+
+def _complete_plan(tenant, accion, responsable):
+    connection.set_tenant(tenant)
+    plan = PlanTrabajo.objects.create(accion=accion)
+    Actividad.objects.create(
+        plan=plan,
+        descripcion='Actividad completada para prueba',
+        responsable=responsable,
+        fecha_limite='2026-12-31',
+        estado='completada',
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -288,6 +302,7 @@ def test_update_verified_accion_returns_400():
     accion = AccionService.create_accion(issue, 'correctiva', 'res', resp, '2026-12-31', admin)
     connection.set_tenant(tenant)
     AccionService.transition_state(accion, 'en_proceso', resp)
+    _complete_plan(tenant, accion, resp)
     AccionService.transition_state(accion, 'cerrado', sup)
     AccionService.transition_state(accion, 'verificado', ver)
     client = _client(tenant, admin)
@@ -371,6 +386,9 @@ def test_e2e_full_lifecycle():
     )
     assert r.status_code == 200
     assert r.data['estado'] == 'en_proceso'
+
+    connection.set_tenant(tenant)
+    _complete_plan(tenant, Accion.objects.get(pk=accion_id), resp)
 
     # Supervisor cierra
     client_sup = _client(tenant, sup)
