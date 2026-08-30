@@ -47,7 +47,7 @@ def _get_admin(tenant, email):
 def _client_for_tenant(tenant, user=None, domain=None):
     """APIClient configured to hit the tenant's domain with optional auth."""
     if domain is None:
-        domain = f'{tenant.schema_name}.sgca.com'
+        domain = f'{tenant.schema_name}.localhost'
     client = APIClient()
     client.defaults['HTTP_HOST'] = domain
     if user is not None:

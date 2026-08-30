@@ -43,7 +43,7 @@ def _make_user(tenant, email, role='responsable'):
 
 def _client(tenant, user=None):
     client = APIClient()
-    client.defaults['HTTP_HOST'] = f'{tenant.schema_name}.sgca.com'
+    client.defaults['HTTP_HOST'] = f'{tenant.schema_name}.localhost'
     if user:
         connection.set_tenant(tenant)
         token = str(RefreshToken.for_user(user).access_token)
