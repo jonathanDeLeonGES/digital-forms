@@ -2,9 +2,9 @@ name: CI/CD
 
 on:
   pull_request:
-    branches: [master, main]
+    branches: [master, main, scenario/df-11-responsable-temporal-boundary]
   push:
-    branches: [master, main]
+    branches: [master, main, scenario/df-11-responsable-temporal-boundary]
 
 jobs:
   backend-tests:
@@ -66,6 +66,57 @@ jobs:
       - run: npm run build
       - run: npm test
 
+  compose-verification:
+    # DF-58: levanta el stack de Docker Compose del proyecto y verifica por
+    # HTTP (con datos desechables) que un responsable temporal puede iniciar
+    # una acción el último día de su asignación, además de correr la
+    # regresión pytest dentro del contenedor del backend.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar entorno local sin credenciales externas
+        run: |
+          grep -E '^(DJANGO_|DB_|TENANT_BASE_DOMAIN=|REDIS_URL=)' .env.dev > .env.dev.ci
+          mv .env.dev.ci .env.dev
+      - name: Iniciar Docker Compose
+        run: docker compose -p df58ci up -d --build db redis minio minio-init backend
+      - name: Esperar backend listo
+        run: |
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+              -H 'Content-Type: application/json' -d '{}' \
+              http://localhost:8000/api/public/tenants/register/ || true)
+            [ "$code" = "400" ] && echo "backend listo" && exit 0
+            sleep 2
+          done
+          echo "backend no respondió a tiempo" && exit 1
+      - name: Regresión pytest DF-58 dentro del contenedor
+        run: |
+          mkdir -p evidence
+          docker compose -p df58ci exec -T backend pytest apps/acciones/tests -k df58 -q \
+            2>&1 | tee evidence/pytest-df58.txt
+      - name: Verificación HTTP DF-58 (Docker Compose)
+        run: |
+          EVIDENCE_FILE=evidence/http-df58.json \
+            python3 postman/verify_df58_responsable_temporal.py \
+            2>&1 | tee evidence/http-df58.txt
+      - name: Recopilar logs de Compose
+        if: always()
+        run: |
+          mkdir -p evidence
+          docker compose -p df58ci ps -a > evidence/compose-status.txt || true
+          docker compose -p df58ci logs --no-color backend > evidence/backend.log 2>&1 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: df58-compose-evidence
+          path: evidence/
+          retention-days: 14
+      - name: Limpiar entorno desechable
+        if: always()
+        run: docker compose -p df58ci down --volumes --remove-orphans
+
   notify-pr:
     if: github.event_name == 'pull_request'
     needs: [backend-tests, frontend-tests]
@@ -84,7 +135,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   docker-build:
-    needs: [backend-tests, frontend-tests]
+    needs: [backend-tests, frontend-tests, compose-verification]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -95,7 +146,9 @@ jobs:
 
   deploy:
     needs: [docker-build]
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    # DF-58: la rama del escenario actúa como rama base del ticket, por lo
+    # que el push del merge también dispara el job de deploy.
+    if: (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/scenario/df-11-responsable-temporal-boundary') && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: staging
     steps:
