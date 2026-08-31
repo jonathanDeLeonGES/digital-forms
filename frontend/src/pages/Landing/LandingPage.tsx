@@ -60,16 +60,16 @@ export default function LandingPage() {
               Ingresa el subdominio de tu empresa para acceder.
             </p>
             <form onSubmit={handleAccess} className="space-y-3">
-              <div className="flex items-center rounded-lg border border-gray-300 shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
+              <div className="flex items-stretch shadow-sm focus-within:ring-2 focus-within:ring-blue-500 rounded-lg">
                 <input
                   type="text"
                   value={subdomain}
                   onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                   placeholder="mi-empresa"
-                  className="flex-1 px-3 py-2 text-sm focus:outline-none"
+                  className="flex-1 min-w-0 px-3 py-2 text-sm border border-r-0 border-gray-300 rounded-l-lg focus:outline-none"
                 />
-                <span className="px-3 py-2 bg-gray-50 text-gray-400 text-xs border-l border-gray-300 select-none whitespace-nowrap">
-                  .sgca.com
+                <span className="flex items-center px-3 py-2 bg-gray-50 text-gray-500 text-sm border border-l-0 border-gray-300 rounded-r-lg select-none whitespace-nowrap">
+                  .{import.meta.env.TENANT_BASE_DOMAIN ?? 'sgca.com'}
                 </span>
               </div>
               {error && <p className="text-xs text-red-600">{error}</p>}

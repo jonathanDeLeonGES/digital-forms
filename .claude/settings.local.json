@@ -4,7 +4,8 @@
       "Bash(grep -in \"password\\\\s*=\\\\|api_key\\\\s*=\\\\|secret\\\\s*=\\\\|token\\\\s*=\" backend/apps/tenants/models.py backend/apps/tenants/tests/test_models.py)",
       "Bash(echo \"exit:$?\")",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(curl *)"
     ]
   }
 }

@@ -88,46 +88,23 @@ class IssueService:
     def upsert_ishikawa(issue: Issue, causas_por_categoria: dict) -> DiagramaIshikawa:
         diagrama, _ = DiagramaIshikawa.objects.get_or_create(issue=issue)
 
+        # Full replace: delete all existing causas (cascades to subcausas) and recreate.
+        # This is correct for a PUT endpoint and avoids stale-id issues when the client
+        # omits ids (e.g. two causas with identical descriptions).
+        diagrama.causas.all().delete()
+
         for categoria, causas_data in causas_por_categoria.items():
-            causa_ids_recibidos = []
             for causa_data in causas_data:
-                causa_id = causa_data.get('id')
-                subcausas_data = causa_data.get('subcausas', [])
-
-                if causa_id:
-                    causa = CausaRaiz.objects.get(pk=causa_id, diagrama=diagrama)
-                    causa.descripcion = causa_data['descripcion']
-                    causa.save(update_fields=['descripcion'])
-                else:
-                    causa = CausaRaiz.objects.create(
-                        diagrama=diagrama,
-                        categoria=categoria,
-                        descripcion=causa_data['descripcion'],
+                causa = CausaRaiz.objects.create(
+                    diagrama=diagrama,
+                    categoria=categoria,
+                    descripcion=causa_data['descripcion'],
+                )
+                for sub_data in causa_data.get('subcausas', []):
+                    SubCausa.objects.create(
+                        causa=causa,
+                        descripcion=sub_data['descripcion'],
                     )
-                causa_ids_recibidos.append(causa.pk)
-
-                # Upsert subcausas
-                sub_ids_recibidos = []
-                for sub_data in subcausas_data:
-                    sub_id = sub_data.get('id')
-                    if sub_id:
-                        sub = SubCausa.objects.get(pk=sub_id, causa=causa)
-                        sub.descripcion = sub_data['descripcion']
-                        sub.save(update_fields=['descripcion'])
-                    else:
-                        sub = SubCausa.objects.create(
-                            causa=causa,
-                            descripcion=sub_data['descripcion'],
-                        )
-                    sub_ids_recibidos.append(sub.pk)
-
-                # Eliminar subcausas removidas del payload
-                causa.subcausas.exclude(pk__in=sub_ids_recibidos).delete()
-
-            # Eliminar causas de esta categoría removidas del payload
-            diagrama.causas.filter(
-                categoria=categoria
-            ).exclude(pk__in=causa_ids_recibidos).delete()
 
         diagrama.refresh_from_db()
         return diagrama

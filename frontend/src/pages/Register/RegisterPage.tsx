@@ -20,6 +20,7 @@ interface SuccessState {
   trial_expires_at: string
 }
 
+const TENANT_BASE_DOMAIN = import.meta.env.TENANT_BASE_DOMAIN ?? 'sgca.com'
 const SUBDOMAIN_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -148,7 +149,7 @@ export default function RegisterPage() {
           </p>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <p className="text-sm text-blue-700 font-medium mb-1">URL de acceso de su empresa:</p>
-            <p className="text-lg font-bold text-blue-900">{success.subdominio}.sgca.com</p>
+            <p className="text-lg font-bold text-blue-900">{success.subdominio}.{TENANT_BASE_DOMAIN}</p>
           </div>
           <p className="text-sm text-gray-500">
             Comparta esta URL con los usuarios de su empresa para que puedan acceder al sistema.
@@ -216,7 +217,7 @@ export default function RegisterPage() {
                 }`}
               />
               <span className="px-3 py-2 bg-gray-100 text-gray-500 text-sm border-l border-gray-300 select-none">
-                .sgca.com
+                .{TENANT_BASE_DOMAIN}
               </span>
             </div>
             <p className="mt-1 text-xs text-gray-400">

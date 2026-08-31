@@ -81,25 +81,7 @@ export interface IshikawaWriteData {
   causas: IshikawaCausaWrite[]
 }
 
-function getHeaders(): HeadersInit {
-  const token = localStorage.getItem('access_token')
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  }
-}
-
-async function handleResponse<T>(resp: Response): Promise<T> {
-  if (!resp.ok) {
-    const body = await resp.json().catch(() => ({ detail: resp.statusText }))
-    const err = Object.assign(new Error(body.detail ?? JSON.stringify(body)), {
-      status: resp.status,
-      data: body,
-    })
-    throw err
-  }
-  return resp.json()
-}
+import { fetchWithAuth, handleResponse } from './fetchWithAuth'
 
 export const issuesService = {
   async getIssues(filters: IssueFilters = {}): Promise<PaginatedResponse<IssueListItem>> {
@@ -108,51 +90,41 @@ export const issuesService = {
       if (v !== undefined && v !== '' && v !== null) params.set(k, String(v))
     }
     const qs = params.toString()
-    const resp = await fetch(`/api/issues/${qs ? `?${qs}` : ''}`, { headers: getHeaders() })
+    const resp = await fetchWithAuth(`/api/issues/${qs ? `?${qs}` : ''}`)
     return handleResponse(resp)
   },
 
   async getIssue(id: number): Promise<IssueDetail> {
-    const resp = await fetch(`/api/issues/${id}/`, { headers: getHeaders() })
+    const resp = await fetchWithAuth(`/api/issues/${id}/`)
     return handleResponse(resp)
   },
 
   async createIssue(data: IssueWriteData): Promise<IssueDetail> {
-    const resp = await fetch('/api/issues/', {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    })
+    const resp = await fetchWithAuth('/api/issues/', { method: 'POST', body: JSON.stringify(data) })
     return handleResponse(resp)
   },
 
   async updateIssue(id: number, data: Partial<IssueWriteData>): Promise<IssueDetail> {
-    const resp = await fetch(`/api/issues/${id}/`, {
-      method: 'PATCH',
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    })
+    const resp = await fetchWithAuth(`/api/issues/${id}/`, { method: 'PATCH', body: JSON.stringify(data) })
     return handleResponse(resp)
   },
 
   async transitionIssue(id: number, estado: string, comentario = ''): Promise<IssueDetail> {
-    const resp = await fetch(`/api/issues/${id}/transition/`, {
+    const resp = await fetchWithAuth(`/api/issues/${id}/transition/`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify({ estado, comentario }),
     })
     return handleResponse(resp)
   },
 
   async getIshikawa(id: number): Promise<IshikawaData> {
-    const resp = await fetch(`/api/issues/${id}/ishikawa/`, { headers: getHeaders() })
+    const resp = await fetchWithAuth(`/api/issues/${id}/ishikawa/`)
     return handleResponse(resp)
   },
 
   async updateIshikawa(id: number, data: IshikawaWriteData): Promise<IshikawaData> {
-    const resp = await fetch(`/api/issues/${id}/ishikawa/`, {
+    const resp = await fetchWithAuth(`/api/issues/${id}/ishikawa/`, {
       method: 'PUT',
-      headers: getHeaders(),
       body: JSON.stringify(data),
     })
     return handleResponse(resp)

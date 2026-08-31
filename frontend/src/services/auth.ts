@@ -93,6 +93,17 @@ export async function loginApi(
   return resp.json()
 }
 
+export async function refreshTokenApi(refresh: string): Promise<string> {
+  const resp = await fetch('/api/auth/refresh/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh }),
+  })
+  if (!resp.ok) throw new Error('Refresh failed')
+  const data = await resp.json()
+  return data.access as string
+}
+
 export async function logoutApi(refresh: string): Promise<void> {
   await fetch('/api/auth/logout/', {
     method: 'POST',
